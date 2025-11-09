@@ -16,7 +16,7 @@ Benefits:
 ## Highlights
 
 - Sidebar session switcher backed by a lightweight zustand store
-- Timeline inspector that renders streaming @agentos/core chunks with color-coded context
+- Timeline inspector that renders streaming @framers/agentos chunks with color-coded context
 - Request composer for prototyping turns or replaying transcripts (wire it to your backend when ready)
 - Dark, neon-drenched UI that matches the Frame.dev production command centre
 
@@ -55,7 +55,7 @@ See [`docs/CLIENT_STORAGE_AND_EXPORTS.md`](../../docs/CLIENT_STORAGE_AND_EXPORTS
 3. Start the backend (`pnpm --filter backend dev`) and then run the workbench (`pnpm --filter @framersai/agentos-client dev`).
 4. Use the request composer to fire a turn—live `AGENCY_UPDATE` / `WORKFLOW_UPDATE` chunks will populate the timeline automatically.
 
-The client mirrors the streaming contracts from `@agentos/core`, so backend responses flow straight into the UI with no reshaping.
+The client mirrors the streaming contracts from `@framers/agentos`, so backend responses flow straight into the UI with no reshaping.
 
 ### Onboarding
 
@@ -73,7 +73,7 @@ See `docs/BACKEND_API.md` for complete request/response shapes and examples.
 
 ## Licensing
 
-- AgentOS core (`@agentos/core`) — Apache 2.0
+- AgentOS core (`@framers/agentos`) — Apache 2.0
 - Marketplace and site components — MIT (vca.chat is the public marketplace we operate)
 
 ## Links
@@ -83,3 +83,4 @@ See `docs/BACKEND_API.md` for complete request/response shapes and examples.
 - Marketplace: https://vca.chat
 - GitHub: https://github.com/framersai/agentos
 - NPM: https://www.npmjs.com/package/@framers/agentos, https://www.npmjs.com/package/@framers/sql-storage-adapter
+

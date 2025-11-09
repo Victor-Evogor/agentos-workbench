@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Better panel separation in dark mode */
+  .panel-border-subtle {
+    @apply border-slate-200/80 dark:border-white/[0.15];
+  }
+  
+  .panel-shadow-lifted {
+    @apply shadow-lg shadow-slate-900/5 dark:shadow-black/30;
+  }
+  
+  .modal-backdrop-blur {
+    @apply backdrop-blur-sm;
+  }
+}
+
 :root {
   color-scheme: light dark;
 
@@ -18,14 +33,14 @@
 .dark {
   color-scheme: dark;
 
-  /* Dark mode colors */
-  --color-background-primary: hsl(222, 47%, 11%);
-  --color-background-secondary: hsl(217, 33%, 14%);
+  /* Dark mode colors - improved contrast and depth */
+  --color-background-primary: hsl(222, 47%, 9%);
+  --color-background-secondary: hsl(217, 33%, 12%);
   --color-text-primary: hsl(210, 40%, 98%);
-  --color-text-secondary: hsl(215, 18%, 72%);
-  --color-text-muted: hsl(217, 10%, 50%);
-  --color-accent-primary: hsl(217, 91%, 60%);
-  --color-border-primary: hsl(217, 33%, 20%);
+  --color-text-secondary: hsl(215, 20%, 75%);
+  --color-text-muted: hsl(217, 12%, 55%);
+  --color-accent-primary: hsl(217, 91%, 62%);
+  --color-border-primary: hsl(217, 30%, 22%);
 }
 
 /* Palette variants override accents and subtle surfaces */

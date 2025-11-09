@@ -707,8 +707,8 @@ export default function App() {
         </div>
       </header>
       {showThemePanel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xl shadow-slate-900/30 dark:border-white/20 dark:bg-slate-900 dark:shadow-black/50">
             <ThemePanel />
             <div className="mt-3 flex justify-end">
               <button onClick={() => setShowThemePanel(false)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300">Close</button>
@@ -718,7 +718,7 @@ export default function App() {
       )}
       {showSettingsModal && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" 
           role="dialog" 
           aria-modal="true"
           onClick={(e) => {
@@ -732,7 +732,7 @@ export default function App() {
             }
           }}
         >
-          <div className="flex h-full max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div className="flex h-full max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/20 dark:border-white/20 dark:bg-slate-900 dark:shadow-black/50">
             <div className="flex-1 overflow-y-auto p-4">
               <SettingsPanel />
             </div>
@@ -751,7 +751,7 @@ export default function App() {
       )}
       {showAboutModal && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" 
           role="dialog" 
           aria-modal="true"
           onClick={(e) => {
@@ -765,7 +765,7 @@ export default function App() {
             }
           }}
         >
-          <div className="flex h-full max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div className="flex h-full max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/20 dark:border-white/20 dark:bg-slate-900 dark:shadow-black/50">
             <div className="flex-1 overflow-y-auto p-4">
               <AboutPanel />
             </div>
@@ -992,14 +992,14 @@ export default function App() {
               <SessionInspector />
               <div className="border-t border-slate-200 dark:border-white/10 md:hidden" />
               <div className="grid gap-4 sm:grid-cols-2 md:block md:space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-slate-900/60">
+                <section className="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-lg shadow-slate-900/5 dark:border-white/[0.15] dark:bg-slate-900/60 dark:shadow-black/30">
                   <header className="mb-2">
                     <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Stream status</p>
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Live telemetry</h3>
                   </header>
                   <TelemetryView />
                 </section>
-                <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-slate-900/60">
+                <section className="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-lg shadow-slate-900/5 dark:border-white/[0.15] dark:bg-slate-900/60 dark:shadow-black/30">
                   <header className="mb-2">
                     <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Analytics</p>
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Usage insights</h3>
