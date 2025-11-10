@@ -28,11 +28,13 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src")
+      "@": path.resolve(__dirname, "src"),
+      // Use workspace source for browser-safe build and avoid package exports resolution
+      "@framers/sql-storage-adapter": path.resolve(__dirname, "../../packages/sql-storage-adapter/src/index.ts")
     }
   },
   optimizeDeps: {
-    exclude: ['pg', 'pg-native', 'better-sqlite3']
+    exclude: ['pg', 'pg-native', 'better-sqlite3', '@framers/sql-storage-adapter']
   },
   assetsInclude: ['**/*.wasm'],
   server: {
