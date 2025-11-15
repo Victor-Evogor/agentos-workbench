@@ -121,12 +121,12 @@ export function createLocalWorkflowPack(): ExtensionPack {
       definition: JSON.parse(JSON.stringify(definition))
     },
     metadata: {
-      origin: "agentos-client-local"
+      origin: "agentos-workbench-local"
     }
   }));
 
   return {
-    name: "agentos-client-local-workflows",
+    name: "agentos-workbench-local-workflows",
     version: "0.1.0",
     descriptors
   };

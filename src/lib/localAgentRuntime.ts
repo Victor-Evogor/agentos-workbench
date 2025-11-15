@@ -30,7 +30,7 @@ import { PrismaClient } from "@prisma/client";
 import { createDatabase, type StorageAdapter } from "@framers/sql-storage-adapter";
 
 const DEFAULT_PERSONA_ID = "v_researcher";
-const DEFAULT_USER_ID = agentOSConfig.defaultUserId ?? "agentos-client-user";
+const DEFAULT_USER_ID = agentOSConfig.defaultUserId ?? "agentos-workbench-user";
 
 class LocalAuthService implements IAuthService {
   async validateToken(token: string): Promise<{ id: string } | null> {
@@ -133,7 +133,7 @@ const conversationManagerConfig: ConversationManagerConfig = {
 };
 
 const toolOrchestratorConfig: ToolOrchestratorConfig = {
-  orchestratorId: "agentos-client-local",
+  orchestratorId: "agentos-workbench-local",
   defaultToolCallTimeoutMs: 25_000,
   maxConcurrentToolCalls: 4,
   logToolCalls: false,

@@ -42,7 +42,7 @@ export const useSecretStore = create<SecretState>()(
       getSecretValue: (id) => get().secrets[id]?.value
     }),
     {
-      name: "agentos-client-secrets",
+      name: "agentos-workbench-secrets",
       storage: createJSONStorage(() => sqlStateStorage),
       partialize: (state) => ({
         secrets: state.secrets

@@ -1,6 +1,6 @@
 <div align="center">
 
-# AgentOS Client Workbench
+# AgentOS Workbench
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../../logos/agentos-primary-no-tagline-dark-2x.png">
@@ -48,7 +48,7 @@ pnpm typecheck
 - Stored: personas (remote + local), agencies, and sessions (timeline events).
 - Export per-session from the timeline header: "Export session", "Export agency", "Export workflow".
 - Export everything from Settings → Data → "Export all" (also available in the timeline).
-- Import from Settings → Data → "Import…" (schema: `agentos-client-export-v1`).
+- Import from Settings → Data → "Import…" (schema: `agentos-workbench-export-v1`).
 - Clear local data from Settings → Data → "Clear storage" (export first if needed).
 
 See [`docs/CLIENT_STORAGE_AND_EXPORTS.md`](../../docs/CLIENT_STORAGE_AND_EXPORTS.md) for details.
@@ -64,7 +64,7 @@ See [`docs/CLIENT_STORAGE_AND_EXPORTS.md`](../../docs/CLIENT_STORAGE_AND_EXPORTS
 
    Leave them unset if you proxy through `/api/agentos`.
 2. In the backend, ensure `AGENTOS_ENABLED=true` (and any provider keys) so `/agentos/*` routes are exposed.
-3. Start the backend (`pnpm --filter backend dev`) and then run the workbench (`pnpm --filter @framersai/agentos-client dev`).
+3. Start the backend (`pnpm --filter backend dev`) and then run the workbench (`pnpm --filter @framersai/agentos-workbench dev`).
 4. Use the request composer to fire a turn—live `AGENCY_UPDATE` / `WORKFLOW_UPDATE` chunks will populate the timeline automatically.
 
 The client mirrors the streaming contracts from `@framers/agentos`, so backend responses flow straight into the UI with no reshaping.

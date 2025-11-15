@@ -1,5 +1,5 @@
 /**
- * @file apps/agentos-client/src/lib/dataExport.ts
+ * @file apps/agentos-workbench/src/lib/dataExport.ts
  * @description Data export utilities for JSON, CSV, and other formats
  */
 

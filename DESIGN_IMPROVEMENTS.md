@@ -121,7 +121,7 @@ Accent:
 
 #### Store Implementation
 ```typescript
-// apps/agentos-client/src/state/themeStore.ts
+// apps/agentos-workbench/src/state/themeStore.ts
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
@@ -333,7 +333,7 @@ pnpm run lint
 ## 📁 Modified Files
 
 ```
-apps/agentos-client/
+apps/agentos-workbench/
 ├── index.html                          ✏️ Enhanced metadata, theme-color
 ├── ACCESSIBILITY.md                    ✨ NEW - Comprehensive guide
 ├── src/

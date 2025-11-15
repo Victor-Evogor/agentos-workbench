@@ -24,7 +24,7 @@ export const useUiStore = create<UiState>()(
       snoozeWelcomeTour: (hours = 24) => set({ welcomeTourSnoozeUntil: Date.now() + hours * 60 * 60 * 1000 }),
       setPreferredLeftPanel: (panel) => set({ preferredLeftPanel: panel }),
     }),
-    { name: 'agentos-client-ui', storage: createJSONStorage(() => (typeof window !== 'undefined' ? idbStorage : sqlStateStorage)) }
+    { name: 'agentos-workbench-ui', storage: createJSONStorage(() => (typeof window !== 'undefined' ? idbStorage : sqlStateStorage)) }
   )
 );
 

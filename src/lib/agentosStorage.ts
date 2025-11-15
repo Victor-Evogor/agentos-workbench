@@ -1,7 +1,7 @@
 /**
  * @fileoverview AgentOS Storage Setup - Client-side storage initialization
  * @description Creates and configures storage adapter for AgentOS with schema setup.
- * This is AgentOS-specific code that lives in agentos-client, not in sql-storage-adapter.
+ * This is AgentOS-specific code that lives in agentos-workbench, not in sql-storage-adapter.
  */
 
 import { IndexedDbAdapter, type StorageAdapter } from '@framers/sql-storage-adapter';
@@ -85,10 +85,10 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry(timestamp);
  * Creates a storage adapter for AgentOS with IndexedDB (browser) or auto-detection.
  * Sets up AgentOS-specific schema.
  * 
- * @param dbName - Database name (default: 'agentos-client-db')
+ * @param dbName - Database name (default: 'agentos-workbench-db')
  * @returns Initialized StorageAdapter with AgentOS schema
  */
-export async function createAgentOSStorageAdapter(dbName = 'agentos-client-db'): Promise<StorageAdapter> {
+export async function createAgentOSStorageAdapter(dbName = 'agentos-workbench-db'): Promise<StorageAdapter> {
   // Use IndexedDB adapter directly for browser
   // Configure sql.js to load WASM file correctly in Vite
   const adapter = new IndexedDbAdapter({

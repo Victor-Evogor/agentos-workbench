@@ -4,7 +4,7 @@ import { createAgentOSStorageAdapter } from "./agentosStorage";
 import type { StorageAdapter } from "@framers/sql-storage-adapter";
 
 const DEFAULT_USER_ID = "agentos-workbench-user";
-const DEFAULT_DB_NAME = "agentos-client-db";
+const DEFAULT_DB_NAME = "agentos-workbench-db";
 const MAX_EVENTS_PER_SESSION = 200;
 
 type SqlRow = Record<string, unknown>;

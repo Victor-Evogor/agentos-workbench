@@ -575,7 +575,7 @@ export default function App() {
             definitionId: workflowDefinitionId,
             workflowId: workflowInstanceId,
             conversationId: sessionId,
-            metadata: { source: "agentos-client" }
+            metadata: { source: "agentos-workbench" }
           }
         : undefined;
 

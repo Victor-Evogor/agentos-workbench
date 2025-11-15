@@ -320,7 +320,7 @@ export const useSessionStore = create<SessionState>()(
       clearWorkflowSnapshots: () => set(() => ({ workflowSnapshots: {} }))
     }),
     {
-      name: "agentos-client-state",
+      name: "agentos-workbench-state",
       storage: persistedStorage,
       partialize: (state) => ({
         personas: state.personas,
