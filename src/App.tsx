@@ -675,10 +675,10 @@ export default function App() {
   // Removed auto-new-session on tab switch; tabs now only change view and filter.
 
   return (
-    <>
+    <div className="flex h-screen flex-col overflow-hidden theme-bg-primary theme-text-primary transition-theme">
       <SkipLink />
       {/* Top Header */}
-      <header className="sticky top-0 z-50 border-b theme-border theme-bg-primary-soft px-4 py-3 backdrop-blur-sm transition-theme">
+      <header className="flex-none sticky top-0 z-50 border-b theme-border theme-bg-primary-soft px-4 py-2 backdrop-blur-sm transition-theme">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {!isDesktop && (
@@ -692,8 +692,8 @@ export default function App() {
               </button>
             )}
             <a href="https://agentos.sh" target="_blank" rel="noreferrer" className="group flex items-center gap-2">
-              <img src="/agentos-icon.svg" alt="AgentOS" className="h-7 w-7" />
-              <span className="flex items-baseline gap-0.5 text-[20px] font-semibold leading-none theme-text-primary">
+              <img src="/agentos-icon.svg" alt="AgentOS" className="h-6 w-6" />
+              <span className="flex items-baseline gap-0.5 text-[18px] font-semibold leading-none theme-text-primary">
                 Agent
                 <span
                   className="leading-none"
@@ -727,6 +727,7 @@ export default function App() {
           </nav>
         </div>
       </header>
+
       {showThemePanel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
           <div className="card-panel--strong w-full max-w-lg p-4 shadow-2xl shadow-[rgba(15,23,42,0.2)]">
@@ -803,19 +804,22 @@ export default function App() {
           </div>
         </div>
       )}
-      <div className={`${sidebarCollapsed ? 'grid-cols-1' : 'grid-cols-panel'} grid min-h-screen w-full theme-bg-primary theme-text-primary transition-theme`}>
+
+      <div className={`flex-1 min-h-0 grid w-full ${sidebarCollapsed ? 'grid-cols-1' : 'grid-cols-panel'} transition-all duration-300 ease-in-out-sine`}>
         {/* Navigation Sidebar */}
         {!sidebarCollapsed && (
           isDesktop ? (
-            <Sidebar
-              onCreateSession={handleCreateSession}
-              onToggleCollapse={() => setSidebarCollapsed(true)}
-              onNavigate={(key) => {
-                if (key === 'settings') { setShowSettingsModal(true); return; }
-                if (key === 'about') { setShowAboutModal(true); return; }
-                setLeftTab(key as LeftTabKey);
-              }}
-            />
+            <div className="h-full overflow-y-auto border-r theme-border">
+              <Sidebar
+                onCreateSession={handleCreateSession}
+                onToggleCollapse={() => setSidebarCollapsed(true)}
+                onNavigate={(key) => {
+                  if (key === 'settings') { setShowSettingsModal(true); return; }
+                  if (key === 'about') { setShowAboutModal(true); return; }
+                  setLeftTab(key as LeftTabKey);
+                }}
+              />
+            </div>
           ) : (
             showMobileSidebar && (
               <div className="fixed inset-0 z-50 flex lg:hidden">
@@ -840,12 +844,12 @@ export default function App() {
         {/* Main Content Area */}
         <main 
           id="main-content"
-          className="flex min-w-0 flex-col gap-6 overflow-y-auto theme-bg-primary-soft p-6 transition-theme"
+          className="flex min-w-0 flex-col gap-4 h-full md:overflow-hidden overflow-y-auto theme-bg-primary-soft p-4 transition-theme"
           role="main"
           aria-label={t("app.labels.mainContent", { defaultValue: "Main content area" })}
         >
           {sidebarCollapsed && (
-            <div className="flex justify-end">
+            <div className="flex-none flex justify-end">
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(false)}
@@ -856,16 +860,16 @@ export default function App() {
               </button>
             </div>
           )}
-          <div className="flex min-w-0 flex-1 min-h-0 flex-col gap-6 md:grid md:grid-cols-[1fr_2fr]">
+          <div className="flex-1 min-h-0 flex flex-col gap-4 md:grid md:gap-4 md:grid-cols-[1fr_2fr]">
             {/* Left Column: Tabbed coordination */}
-            <section className="flex h-full flex-col gap-4" aria-label={t("app.labels.leftPanel", { defaultValue: "Composer and coordination" })}>
+            <section className="flex flex-col gap-3 min-h-[500px] md:min-h-0 md:h-full overflow-hidden" aria-label={t("app.labels.leftPanel", { defaultValue: "Composer and coordination" })}>
               <div
                 role="tablist"
                 aria-label="Left panel tabs"
-                className="card-panel--strong p-2 text-sm transition-theme"
+                className="flex-none card-panel--strong p-1.5 text-sm transition-theme sticky top-0 z-10"
                 data-tour="tabs"
               >
-                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                <div className="flex flex-wrap items-center gap-1">
                   {LEFT_TABS.map((tab) => {
                     const active = leftTab === tab.key;
                     return (
@@ -874,7 +878,7 @@ export default function App() {
                         role="tab"
                         aria-selected={active}
                         onClick={() => setLeftTab(tab.key)}
-                        className={`rounded-full border px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        className={`rounded-full border px-2 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           active
                             ? "theme-bg-accent theme-text-on-accent shadow-sm"
                             : "theme-text-secondary theme-bg-secondary border theme-border hover:opacity-95"
@@ -887,160 +891,164 @@ export default function App() {
               <div className="ml-auto" />
                 </div>
               </div>
-              {leftTab === 'compose' && (
-                activeSession?.targetType === 'agency' ? (
-                  <AgencyComposer
-                    onSubmit={(agencyPayload) => {
-                      const sessionId = activeSessionId || crypto.randomUUID();
-                      setActiveSession(sessionId);
-                      
-                      // Parse roles from markdown if needed
-                      let roles: AgentRoleConfig[] = agencyPayload.roles;
-                      if (agencyPayload.format === 'markdown' && agencyPayload.markdownInput) {
-                        const lines = agencyPayload.markdownInput.split('\n').filter(l => l.trim());
-                        roles = [];
-                        for (const line of lines) {
-                          const match = line.match(/^\[([^\]]+)\]\s*(.+)$/);
-                          if (match) {
-                            const roleId = match[1].trim().toLowerCase().replace(/\s+/g, '_');
-                            const instruction = match[2].trim();
-                            const persona = remotePersonas[roles.length % remotePersonas.length] || personas[0];
-                            roles.push({
-                              roleId,
-                              personaId: persona?.id || 'v_researcher',
-                              instruction,
-                              priority: roles.length + 1,
-                            });
+              <div className="flex-1 overflow-y-auto pr-1">
+                {leftTab === 'compose' && (
+                  activeSession?.targetType === 'agency' ? (
+                    <AgencyComposer
+                      onSubmit={(agencyPayload) => {
+                        const sessionId = activeSessionId || crypto.randomUUID();
+                        setActiveSession(sessionId);
+                        
+                        // Parse roles from markdown if needed
+                        let roles: AgentRoleConfig[] = agencyPayload.roles;
+                        if (agencyPayload.format === 'markdown' && agencyPayload.markdownInput) {
+                          const lines = agencyPayload.markdownInput.split('\n').filter(l => l.trim());
+                          roles = [];
+                          for (const line of lines) {
+                            const match = line.match(/^\[([^\]]+)\]\s*(.+)$/);
+                            if (match) {
+                              const roleId = match[1].trim().toLowerCase().replace(/\s+/g, '_');
+                              const instruction = match[2].trim();
+                              const persona = remotePersonas[roles.length % remotePersonas.length] || personas[0];
+                              roles.push({
+                                roleId,
+                                personaId: persona?.id || 'v_researcher',
+                                instruction,
+                                priority: roles.length + 1,
+                              });
+                            }
                           }
                         }
-                      }
-                      
-                      // Start agency workflow via dedicated endpoint
-                      streamHandles.current[sessionId]?.();
-                      delete streamHandles.current[sessionId];
-                      
-                      commitSession({
-                        id: sessionId,
-                        targetType: 'agency',
-                        displayName: activeSession?.displayName || 'Agency Workflow',
-                        agencyId: activeSession?.agencyId,
-                        status: 'streaming',
-                      });
-                      
-                      pushEvent(sessionId, {
-                        id: crypto.randomUUID(),
-                        timestamp: Date.now(),
-                        type: 'log',
-                        payload: { message: `Starting agency workflow: ${agencyPayload.goal}` },
-                      });
-                      
-                      telemetry.startStream(sessionId);
-                      
-                      // Use backend API endpoint for agency workflows
-                      const params = new URLSearchParams({
-                        userId: 'agentos-workbench-user',
-                        conversationId: sessionId,
-                        goal: agencyPayload.goal,
-                        roles: JSON.stringify(roles.map(r => ({
-                          roleId: r.roleId,
-                          personaId: r.personaId,
-                          instruction: r.instruction,
-                          priority: r.priority,
-                        }))),
-                        outputFormat: agencyPayload.outputFormat || 'markdown',
-                      });
-
-                      const baseUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
-                      const eventSource = new EventSource(`${baseUrl}/api/agentos/agency/stream?${params.toString()}`);
-
-                      const cleanup = () => {
-                        eventSource.close();
+                        
+                        // Start agency workflow via dedicated endpoint
+                        streamHandles.current[sessionId]?.();
                         delete streamHandles.current[sessionId];
-                      };
+                        
+                        commitSession({
+                          id: sessionId,
+                          targetType: 'agency',
+                          displayName: activeSession?.displayName || 'Agency Workflow',
+                          agencyId: activeSession?.agencyId,
+                          status: 'streaming',
+                        });
+                        
+                        pushEvent(sessionId, {
+                          id: crypto.randomUUID(),
+                          timestamp: Date.now(),
+                          type: 'log',
+                          payload: { message: `Starting agency workflow: ${agencyPayload.goal}` },
+                        });
+                        
+                        telemetry.startStream(sessionId);
+                        
+                        // Use backend API endpoint for agency workflows
+                        const params = new URLSearchParams({
+                          userId: 'agentos-workbench-user',
+                          conversationId: sessionId,
+                          goal: agencyPayload.goal,
+                          roles: JSON.stringify(roles.map(r => ({
+                            roleId: r.roleId,
+                            personaId: r.personaId,
+                            instruction: r.instruction,
+                            priority: r.priority,
+                          }))),
+                          outputFormat: agencyPayload.outputFormat || 'markdown',
+                        });
 
-                      eventSource.onmessage = (event) => {
-                        try {
-                          const chunk = JSON.parse(event.data);
-                          
+                        const baseUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+                        const eventSource = new EventSource(`${baseUrl}/api/agentos/agency/stream?${params.toString()}`);
+
+                        const cleanup = () => {
+                          eventSource.close();
+                          delete streamHandles.current[sessionId];
+                        };
+
+                        eventSource.onmessage = (event) => {
+                          try {
+                            const chunk = JSON.parse(event.data);
+                            
+                            pushEvent(sessionId, {
+                              id: crypto.randomUUID(),
+                              timestamp: Date.now(),
+                              type: chunk.type as AgentOSChunkType,
+                              payload: chunk,
+                            });
+                            telemetry.noteChunk(sessionId, chunk);
+                            
+                            if (chunk.type === 'agency_update') {
+                              applyAgencySnapshot((chunk as AgentOSAgencyUpdateChunk).agency);
+                            }
+                          } catch (error) {
+                            console.error('[Agency Stream] Failed to parse chunk:', error);
+                          }
+                        };
+
+                        eventSource.addEventListener('done', () => {
+                          commitSession({ id: sessionId, status: 'idle' });
+                          telemetry.endStream(sessionId);
+                          cleanup();
+                        });
+
+                        eventSource.addEventListener('error', () => {
                           pushEvent(sessionId, {
                             id: crypto.randomUUID(),
                             timestamp: Date.now(),
-                            type: chunk.type as AgentOSChunkType,
-                            payload: chunk,
+                            type: 'log',
+                            payload: { message: 'Agency stream connection error', level: 'error' },
                           });
-                          telemetry.noteChunk(sessionId, chunk);
-                          
-                          if (chunk.type === 'agency_update') {
-                            applyAgencySnapshot((chunk as AgentOSAgencyUpdateChunk).agency);
-                          }
-                        } catch (error) {
-                          console.error('[Agency Stream] Failed to parse chunk:', error);
-                        }
-                      };
-
-                      eventSource.addEventListener('done', () => {
-                        commitSession({ id: sessionId, status: 'idle' });
-                        telemetry.endStream(sessionId);
-                        cleanup();
-                      });
-
-                      eventSource.addEventListener('error', () => {
-                        pushEvent(sessionId, {
-                          id: crypto.randomUUID(),
-                          timestamp: Date.now(),
-                          type: 'log',
-                          payload: { message: 'Agency stream connection error', level: 'error' },
+                          commitSession({ id: sessionId, status: 'error' });
+                          telemetry.endStream(sessionId);
+                          cleanup();
                         });
-                        commitSession({ id: sessionId, status: 'error' });
-                        telemetry.endStream(sessionId);
-                        cleanup();
-                      });
 
-                      eventSource.onerror = (error) => {
-                        pushEvent(sessionId, {
-                          id: crypto.randomUUID(),
-                          timestamp: Date.now(),
-                          type: 'log',
-                          payload: { message: `Agency stream error: ${error.type}`, level: 'error' },
-                        });
-                        commitSession({ id: sessionId, status: 'error' });
-                        telemetry.endStream(sessionId);
-                        cleanup();
-                      };
-                      
-                      streamHandles.current[sessionId] = cleanup;
-                    }}
-                    disabled={!backendReady || isAgencyStreaming}
-                    isSubmitting={isAgencyStreaming}
-                  />
-                ) : (
-                  <RequestComposer key={activeSessionId || 'compose'} onSubmit={handleSubmit} />
-                )
-              )}
-              {leftTab === 'personas' && <PersonaCatalog />}
-              {leftTab === 'agency' && <AgencyManager />}
-              {leftTab === 'workflows' && <WorkflowOverview />}
+                        eventSource.onerror = (error) => {
+                          pushEvent(sessionId, {
+                            id: crypto.randomUUID(),
+                            timestamp: Date.now(),
+                            type: 'log',
+                            payload: { message: `Agency stream error: ${error.type}`, level: 'error' },
+                          });
+                          commitSession({ id: sessionId, status: 'error' });
+                          telemetry.endStream(sessionId);
+                          cleanup();
+                        };
+                        
+                        streamHandles.current[sessionId] = cleanup;
+                      }}
+                      disabled={!backendReady || isAgencyStreaming}
+                      isSubmitting={isAgencyStreaming}
+                    />
+                  ) : (
+                    <RequestComposer key={activeSessionId || 'compose'} onSubmit={handleSubmit} />
+                  )
+                )}
+                {leftTab === 'personas' && <PersonaCatalog />}
+                {leftTab === 'agency' && <AgencyManager />}
+                {leftTab === 'workflows' && <WorkflowOverview />}
+              </div>
             </section>
 
             {/* Right Column: Outputs - Stack on mobile, side-by-side on desktop */}
             <aside
-              className="flex min-w-0 h-full max-h-[calc(100vh-6rem)] flex-col gap-4 md:gap-6"
+              className="flex flex-col gap-3 min-h-[500px] md:min-h-0 md:h-full overflow-hidden"
               aria-label={t("app.labels.outputsPanel", { defaultValue: "Outputs and results" })}
             >
-              <SessionInspector />
+              <div className="flex-1 min-h-0 relative">
+                <SessionInspector />
+              </div>
               <div className="border-t border-slate-200 dark:border-white/10 md:hidden" />
-              <div className="grid gap-4 sm:grid-cols-2 md:block md:space-y-6">
-                <section className="card-panel--strong p-4 sm:p-5 transition-theme">
+              <div className="flex-none grid gap-3 sm:grid-cols-2 md:grid-cols-2 md:gap-4">
+                <section className="card-panel--strong p-3 sm:p-4 transition-theme">
                   <header className="mb-2">
-                    <p className="text-xs uppercase tracking-[0.3em] theme-text-muted">Stream status</p>
-                    <h3 className="text-sm font-semibold theme-text-primary">Live telemetry</h3>
+                    <p className="text-[10px] uppercase tracking-[0.3em] theme-text-muted">Stream status</p>
+                    <h3 className="text-xs font-semibold theme-text-primary">Live telemetry</h3>
                   </header>
                   <TelemetryView />
                 </section>
-                <section className="card-panel--strong p-4 sm:p-5 transition-theme">
+                <section className="card-panel--strong p-3 sm:p-4 transition-theme">
                   <header className="mb-2">
-                    <p className="text-xs uppercase tracking-[0.3em] theme-text-muted">Analytics</p>
-                    <h3 className="text-sm font-semibold theme-text-primary">Usage insights</h3>
+                    <p className="text-[10px] uppercase tracking-[0.3em] theme-text-muted">Analytics</p>
+                    <h3 className="text-xs font-semibold theme-text-primary">Usage insights</h3>
                   </header>
                   <AnalyticsView selectedModel={selectedModel} onChangeModel={setSelectedModel} modelOptions={modelOptions} modelData={modelData} />
                 </section>
@@ -1050,8 +1058,8 @@ export default function App() {
         </main>
       </div>
       {/* Footer with tagline */}
-      <footer className="border-t theme-border theme-bg-primary px-6 py-4 text-xs theme-text-muted transition-theme">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+      <footer className="flex-none border-t theme-border theme-bg-primary px-4 py-2 text-[10px] theme-text-muted transition-theme">
+        <div className="mx-auto flex w-full items-center justify-between">
           <span className="uppercase tracking-[0.25em]">AgentOS — Cognitive Operating System</span>
           <div className="flex items-center gap-3">
             <a href="https://agentos.sh" target="_blank" rel="noreferrer" className="transition-colors hover:text-[color:var(--color-accent-primary)]">agentos.sh</a>
@@ -1067,6 +1075,6 @@ export default function App() {
         onRemindLater={() => snoozeWelcomeTour(24)}
       />
       <ImportWizard open={showImport} onClose={() => setShowImport(false)} />
-    </>
+    </div>
   );
 }

@@ -71,41 +71,41 @@ export function WorkflowOverview() {
 
   if (workflows.length === 0) {
     return (
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/60">
-        <p className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Workflow overview</p>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">No workflow updates yet. Launch an automation to populate this panel.</p>
+      <section className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900/60">
+        <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Workflow overview</p>
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">No workflow updates yet. Launch an automation to populate this panel.</p>
       </section>
     );
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/60">
-      <header className="mb-4 flex items-center justify-between">
+    <section className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900/60">
+      <header className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">Workflow overview</p>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Active automations</h3>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Active automations</h3>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:text-slate-400">{workflows.length} tracked</div>
+        <div className="flex items-center gap-1.5">
+          <div className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs text-slate-600 dark:border-white/10 dark:text-slate-400">{workflows.length} tracked</div>
           <button
             type="button"
             onClick={handleClearHistory}
             disabled={workflows.length === 0}
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
+            className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs text-slate-600 transition disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
           >
             Clear history
           </button>
         </div>
       </header>
 
-      <div className="mb-4 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300">
+      <div className="mb-3 flex flex-wrap gap-1.5 text-xs text-slate-600 dark:text-slate-300">
         {statusFilters.map((option) => (
           <button
             key={option}
             type="button"
             onClick={() => setStatusFilter(option)}
             className={clsx(
-              "inline-flex items-center gap-2 rounded-full border px-3 py-1 uppercase tracking-[0.3em]",
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em]",
               statusFilter === option
                 ? "border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-500/60 dark:bg-sky-500/10 dark:text-sky-200"
                 : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-400 dark:hover:border-white/30"
@@ -116,7 +116,7 @@ export function WorkflowOverview() {
         ))}
       </div>
 
-      <div className="space-y-3">
+      <div className="min-h-0 flex-1 overflow-y-auto space-y-2">
         {filteredWorkflows.map((workflow) => {
           const definition = resolveDefinition(workflowDefinitions, workflow.definitionId);
           const statusClass = statusToColor[workflow.status.toLowerCase()] ?? "bg-slate-500/10 text-slate-200 border-slate-500/30";
@@ -130,19 +130,19 @@ export function WorkflowOverview() {
           return (
             <article
               key={workflow.workflowId}
-              className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/60 dark:hover:border-white/20"
+              className="cursor-pointer rounded-xl border border-slate-200 bg-white p-3 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/60 dark:hover:border-white/20"
               onClick={() => setSelectedId(workflow.workflowId)}
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {definition?.displayName ?? workflow.definitionId}
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-500">Workflow #{workflow.workflowId}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-500">#{workflow.workflowId}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={clsx("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em]", statusClass)}>
-                    <Activity className="h-3 w-3" />
+                <div className="flex items-center gap-1.5">
+                  <span className={clsx("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em]", statusClass)}>
+                    <Activity className="h-2.5 w-2.5" />
                     {formatStatus(workflow.status)}
                   </span>
                   <button
@@ -154,38 +154,41 @@ export function WorkflowOverview() {
                         setSelectedId(null);
                       }
                     }}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-[10px] text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:text-slate-400 dark:hover:border-white/30"
+                    className="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:text-slate-400 dark:hover:border-white/30"
                   >
                     Archive
                   </button>
                 </div>
               </div>
-              <dl className="mt-3 grid gap-3 text-xs text-slate-600 dark:text-slate-300 sm:grid-cols-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3 w-3 text-slate-500" />
-                  <span>Updated {new Date(workflow.updatedAt).toLocaleTimeString()}</span>
+              <dl className="mt-2 grid gap-2 text-xs text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-2.5 w-2.5 text-slate-500" />
+                  <span className="text-[10px]">Updated {new Date(workflow.updatedAt).toLocaleTimeString()}</span>
                 </div>
-                {goal ? <div className="truncate text-slate-700 dark:text-slate-200">Goal: {goal}</div> : null}
+                {goal ? <div className="truncate text-[10px] text-slate-700 dark:text-slate-200">Goal: {goal}</div> : null}
               </dl>
               {definition?.description ? (
-                <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">{definition.description}</p>
+                <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{definition.description}</p>
               ) : null}
               {tasks.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500 dark:text-slate-500">Tasks</p>
-                  <ul className="space-y-2">
-                    {tasks.map(([taskId, taskSnapshot]) => {
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-[9px] uppercase tracking-[0.35em] text-slate-500 dark:text-slate-500">Tasks</p>
+                  <ul className="space-y-1.5">
+                    {tasks.slice(0, 3).map(([taskId, taskSnapshot]) => {
                       const displayName = definition?.tasks?.find((task) => task.id === taskId)?.name ?? taskId;
                       return (
-                        <li key={taskId} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200">
-                          <div className="flex items-center gap-2">
-                            <GitBranch className="h-3 w-3 text-slate-500" />
+                        <li key={taskId} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-700 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            <GitBranch className="h-2.5 w-2.5 text-slate-500" />
                             <span>{displayName}</span>
                           </div>
                           <span className="text-slate-500 dark:text-slate-400">{formatStatus(taskSnapshot.status)}</span>
                         </li>
                       );
                     })}
+                    {tasks.length > 3 && (
+                      <li className="text-[9px] text-slate-500 pl-1">+{tasks.length - 3} more tasks</li>
+                    )}
                   </ul>
                 </div>
               ) : null}

@@ -131,10 +131,10 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-32">
         <div className="flex items-center space-x-2">
-          <Clock className="w-5 h-5 animate-spin text-primary" />
-          <span>Loading agency history...</span>
+          <Clock className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-xs theme-text-muted">Loading history...</span>
         </div>
       </div>
     );
@@ -142,10 +142,10 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
 
   if (executions.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <History className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-lg font-semibold mb-2">No Agency Executions Yet</h3>
-        <p className="text-sm text-muted-foreground">
+      <Card className="p-6 text-center">
+        <History className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
+        <h3 className="text-sm font-semibold mb-1 theme-text-primary">No Executions</h3>
+        <p className="text-xs text-muted-foreground">
           Agency executions will appear here once you start a multi-agent workflow.
         </p>
       </Card>
@@ -153,16 +153,16 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <History className="w-6 h-6 text-primary" />
-          <h2 className="text-2xl font-bold">Agency Execution History</h2>
+          <History className="w-4 h-4 text-primary" />
+          <h2 className="text-sm font-bold theme-text-primary">Execution History</h2>
         </div>
-        <Badge variant="secondary">{executions.length} total</Badge>
+        <Badge variant="secondary" size="xs">{executions.length} total</Badge>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {executions.map((execution) => {
           const isExpanded = expandedAgencyId === execution.agency_id;
           const details = agencyDetails.get(execution.agency_id);
@@ -171,78 +171,76 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
           return (
             <Card key={execution.agency_id} className="overflow-hidden">
               <div
-                className="p-4 cursor-pointer hover:bg-accent/5 transition-colors"
+                className="p-3 cursor-pointer hover:bg-accent/5 transition-colors"
                 onClick={() => toggleExpand(execution.agency_id)}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      <h3 className="font-semibold text-base truncate max-w-xl">{execution.goal}</h3>
-                      <Badge variant={getStatusColor(execution.status)} size="sm">
-                        {getStatusIcon(execution.status)}
-                        <span className="ml-1">{execution.status}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1.5">
+                      {isExpanded ? <ChevronDown className="w-3 h-3 flex-shrink-0" /> : <ChevronRight className="w-3 h-3 flex-shrink-0" />}
+                      <h3 className="font-semibold text-sm truncate theme-text-primary">{execution.goal}</h3>
+                      <Badge variant={getStatusColor(execution.status)} size="xs">
+                        <span className="capitalize">{execution.status}</span>
                       </Badge>
                       {emergentData && (
-                        <Badge variant="primary" size="sm">
-                          <Zap className="w-3 h-3 mr-1" />
+                        <Badge variant="primary" size="xs">
+                          <Zap className="w-2.5 h-2.5 mr-1" />
                           Emergent
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                    <div className="flex items-center space-x-3 text-[10px] theme-text-secondary">
                       <span className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock className="w-2.5 h-2.5" />
                         <span>{formatDuration(execution.duration_ms)}</span>
                       </span>
                       <span className="flex items-center space-x-1">
-                        <DollarSign className="w-3 h-3" />
+                        <DollarSign className="w-2.5 h-2.5" />
                         <span>{formatCost(execution.total_cost_usd)}</span>
                       </span>
                       <span className="flex items-center space-x-1">
-                        <Users className="w-3 h-3" />
+                        <Users className="w-2.5 h-2.5" />
                         <span>{details?.seats.length ?? '...'} seats</span>
                       </span>
                       {emergentData && (
                         <span className="flex items-center space-x-1">
-                          <Brain className="w-3 h-3" />
-                          <span>{emergentData.tasksDecomposed?.length ?? 0} tasks decomposed</span>
+                          <Brain className="w-2.5 h-2.5" />
+                          <span>{emergentData.tasksDecomposed?.length ?? 0} tasks</span>
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(execution.started_at).toLocaleString()}
+                  <div className="text-[10px] theme-text-muted whitespace-nowrap ml-2">
+                    {new Date(execution.started_at).toLocaleTimeString()}
                   </div>
                 </div>
 
                 {isExpanded && details && (
-                  <div className="mt-4 pt-4 border-t space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="mt-3 pt-3 border-t theme-border space-y-3" onClick={(e) => e.stopPropagation()}>
                     {/* Seats */}
                     <div>
-                      <h4 className="font-medium text-sm mb-2">Agent Seats</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <h4 className="font-medium text-xs mb-1.5 theme-text-secondary uppercase tracking-wider">Agent Seats</h4>
+                      <div className="grid grid-cols-1 gap-2">
                         {details.seats.map((seat) => (
-                          <div key={seat.id} className="p-3 border rounded-lg space-y-2">
+                          <div key={seat.id} className="p-2 border rounded-md space-y-1 bg-secondary/20">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm">{seat.role_id}</span>
+                              <span className="font-medium text-xs theme-text-primary">{seat.role_id}</span>
                               <Badge variant={getStatusColor(seat.status)} size="xs">
                                 {seat.status}
                               </Badge>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              <div>Persona: {seat.persona_id}</div>
-                              {seat.retry_count > 0 && <div>Retries: {seat.retry_count}</div>}
-                              {seat.usage_cost_usd && <div>Cost: {formatCost(seat.usage_cost_usd)}</div>}
+                            <div className="flex items-center justify-between text-[10px] theme-text-muted">
+                              <span>Persona: {seat.persona_id}</span>
+                              {seat.usage_cost_usd && <span>{formatCost(seat.usage_cost_usd)}</span>}
                             </div>
                             {seat.output && (
-                              <div className="text-xs bg-secondary p-2 rounded max-h-24 overflow-y-auto">
-                                {seat.output.substring(0, 200)}
-                                {seat.output.length > 200 && '...'}
+                              <div className="text-[10px] bg-secondary p-1.5 rounded max-h-16 overflow-y-auto theme-text-secondary font-mono">
+                                {seat.output.substring(0, 150)}
+                                {seat.output.length > 150 && '...'}
                               </div>
                             )}
                             {seat.error && (
-                              <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                              <div className="text-[10px] text-destructive bg-destructive/10 p-1.5 rounded">
                                 {seat.error}
                               </div>
                             )}
@@ -254,36 +252,21 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
                     {/* Emergent Metadata */}
                     {emergentData && (
                       <div>
-                        <h4 className="font-medium text-sm mb-2 flex items-center space-x-1">
-                          <Zap className="w-4 h-4 text-primary" />
-                          <span>Emergent Behavior Analysis</span>
+                        <h4 className="font-medium text-xs mb-1.5 flex items-center space-x-1 theme-text-secondary uppercase tracking-wider">
+                          <Zap className="w-3 h-3 text-primary" />
+                          <span>Emergent Analysis</span>
                         </h4>
-                        <div className="space-y-2 text-xs">
+                        <div className="space-y-2 text-[10px] theme-text-secondary">
                           {emergentData.tasksDecomposed && emergentData.tasksDecomposed.length > 0 && (
                             <div>
-                              <div className="font-medium mb-1">Tasks Decomposed:</div>
-                              <ul className="list-disc list-inside space-y-1">
+                              <div className="font-medium mb-1">Tasks:</div>
+                              <ul className="list-disc list-inside space-y-0.5 pl-1">
                                 {emergentData.tasksDecomposed.map((task: any) => (
                                   <li key={task.taskId}>
                                     {task.description}
-                                    <Badge variant="outline" size="xs" className="ml-2">
-                                      Priority: {task.priority}
-                                    </Badge>
                                   </li>
                                 ))}
                               </ul>
-                            </div>
-                          )}
-                          {emergentData.rolesSpawned && emergentData.rolesSpawned.length > 0 && (
-                            <div>
-                              <div className="font-medium mb-1">Roles Spawned:</div>
-                              <div className="flex flex-wrap gap-1">
-                                {emergentData.rolesSpawned.map((role: any) => (
-                                  <Badge key={role.roleId} variant="secondary" size="xs">
-                                    {role.roleId} ({role.personaId})
-                                  </Badge>
-                                ))}
-                              </div>
                             </div>
                           )}
                         </div>
@@ -293,8 +276,8 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
                     {/* Consolidated Output */}
                     {execution.consolidated_output && (
                       <div>
-                        <h4 className="font-medium text-sm mb-2">Output</h4>
-                        <div className="text-xs bg-secondary p-3 rounded max-h-64 overflow-y-auto whitespace-pre-wrap">
+                        <h4 className="font-medium text-xs mb-1.5 theme-text-secondary uppercase tracking-wider">Output</h4>
+                        <div className="text-[10px] bg-secondary p-2 rounded max-h-32 overflow-y-auto whitespace-pre-wrap theme-text-primary font-mono">
                           {execution.consolidated_output}
                         </div>
                       </div>

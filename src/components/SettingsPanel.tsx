@@ -78,93 +78,93 @@ export function SettingsPanel() {
   };
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/60">
-      <header className="mb-3 flex items-center justify-between">
+    <section className="rounded-xl border theme-border theme-bg-secondary-soft p-3 transition-theme">
+      <header className="mb-2 flex items-center justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Settings</p>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Providers & limits</h3>
+          <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Settings</p>
+          <h3 className="text-sm font-semibold theme-text-primary">Providers & limits</h3>
         </div>
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-full theme-bg-accent px-3 py-1 text-xs font-semibold theme-text-on-accent disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
       </header>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-xs theme-text-muted">Loading…</p>
       ) : (
-        <div className="space-y-6 text-sm">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-4 text-xs">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">OpenAI</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">OpenAI</p>
               <label className="block space-y-1">
-                <span className="text-xs text-slate-600 dark:text-slate-400">API key</span>
+                <span className="text-[10px] theme-text-secondary">API key</span>
                 <input
                   type="password"
                   placeholder={mask.openai || 'sk-…'}
                   value={form.openaiKey}
                   onChange={(e) => setForm((f) => ({ ...f, openaiKey: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                 />
               </label>
               <label className="mt-2 block space-y-1">
-                <span className="text-xs text-slate-600 dark:text-slate-400">Model</span>
+                <span className="text-[10px] theme-text-secondary">Model</span>
                 <input
                   placeholder="gpt-4o-mini"
                   value={form.openaiModel}
                   onChange={(e) => setForm((f) => ({ ...f, openaiModel: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                 />
               </label>
             </div>
 
             <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Anthropic</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Anthropic</p>
               <label className="block space-y-1">
-                <span className="text-xs text-slate-600 dark:text-slate-400">API key</span>
+                <span className="text-[10px] theme-text-secondary">API key</span>
                 <input
                   type="password"
                   placeholder={mask.anthropic || 'sk-ant-…'}
                   value={form.anthropicKey}
                   onChange={(e) => setForm((f) => ({ ...f, anthropicKey: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                 />
               </label>
               <label className="mt-2 block space-y-1">
-                <span className="text-xs text-slate-600 dark:text-slate-400">Model</span>
+                <span className="text-[10px] theme-text-secondary">Model</span>
                 <input
                   placeholder="claude-3-5-sonnet"
                   value={form.anthropicModel}
                   onChange={(e) => setForm((f) => ({ ...f, anthropicModel: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                 />
               </label>
             </div>
           </div>
 
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Rate limiting</p>
+            <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Rate limiting</p>
             <label className="block space-y-1">
-              <span className="text-xs text-slate-600 dark:text-slate-400">Requests per minute</span>
+              <span className="text-[10px] theme-text-secondary">Requests per minute</span>
               <input
                 inputMode="numeric"
                 placeholder="Optional (UI only)"
                 value={form.rpm}
                 onChange={(e) => setForm((f) => ({ ...f, rpm: e.target.value }))}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
               />
             </label>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">Currently informational; server-side enforcement can be enabled later.</p>
+            <p className="mt-1 text-[10px] theme-text-muted">Currently informational; server-side enforcement can be enabled later.</p>
           </div>
 
         </div>
       )}
       
-      <div className="mt-6">
+      <div className="mt-4">
         <GuardrailManager
           guardrails={guardrails}
           onToggle={(id, enabled) => {
@@ -178,7 +178,7 @@ export function SettingsPanel() {
         />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <StorageDashboard />
       </div>
     </section>

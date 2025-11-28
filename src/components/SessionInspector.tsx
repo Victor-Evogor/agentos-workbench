@@ -582,7 +582,7 @@ export function SessionInspector() {
       : agencyDefinition?.goal;
   const workflowIdentifier = agencySnapshot?.workflowId ?? agencyDefinition?.workflowId;
   const timelineContainerClass = clsx(
-    "relative flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10",
+    "relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10",
     isAgencySession
       ? "bg-gradient-to-b from-white via-slate-50 to-white text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:text-slate-100"
       : "bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100"
@@ -659,7 +659,7 @@ export function SessionInspector() {
 
   if (!activeSessionId || !session) {
     return (
-      <div className="flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
+      <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
         <header className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-white/5">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Session timeline</p>

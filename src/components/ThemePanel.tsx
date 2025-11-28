@@ -30,32 +30,32 @@ export function ThemePanel() {
   ];
 
   return (
-    <section className="card-panel--strong p-5 transition-theme">
-      <header className="mb-3 flex items-center justify-between">
+    <section className="card-panel--strong p-3 transition-theme">
+      <header className="mb-2 flex items-center justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Theme</p>
-          <h3 className="text-lg font-semibold theme-text-primary">Display preferences</h3>
+          <h3 className="text-sm font-semibold theme-text-primary">Display preferences</h3>
         </div>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-3 py-1 text-xs theme-text-secondary transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2.5 py-0.5 text-[10px] theme-text-secondary transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {open ? "Hide" : "Show"}
         </button>
       </header>
 
       {open && (
-        <div className="space-y-4 text-sm">
+        <div className="space-y-3 text-xs">
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.35em] theme-text-muted">Mode</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Mode</p>
+            <div className="flex flex-wrap gap-1.5">
               {themes.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
                   onClick={() => setTheme(opt.key)}
-                  className={`rounded-full border px-3 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`rounded-full border px-2.5 py-1 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     theme === opt.key
                       ? "theme-bg-accent theme-text-on-accent border-transparent shadow-sm"
                       : "theme-text-secondary theme-bg-secondary theme-border hover:opacity-95"
@@ -65,19 +65,19 @@ export function ThemePanel() {
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-xs theme-text-muted">Active: {actualTheme}</p>
+            <p className="mt-1 text-[10px] theme-text-muted">Active: {actualTheme}</p>
           </div>
 
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.35em] theme-text-muted">Appearance</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Appearance</p>
+            <div className="flex flex-wrap gap-1.5">
               {appearances.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
                   onClick={() => setAppearance(opt.key)}
                   title={opt.hint}
-                  className={`rounded-full border px-3 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`rounded-full border px-2.5 py-1 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     appearance === opt.key
                       ? "theme-bg-accent theme-text-on-accent border-transparent shadow-sm"
                       : "theme-text-secondary theme-bg-secondary theme-border hover:opacity-95"
@@ -90,14 +90,14 @@ export function ThemePanel() {
           </div>
 
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.35em] theme-text-muted">Style</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Style</p>
+            <div className="flex flex-wrap gap-1.5">
               {palettes.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
                   onClick={() => setPalette(opt.key)}
-                  className={`rounded-full border px-3 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`rounded-full border px-2.5 py-1 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     palette === opt.key
                       ? "theme-bg-accent theme-text-on-accent border-transparent shadow-sm"
                       : "theme-text-secondary theme-bg-secondary theme-border hover:opacity-95"
@@ -107,7 +107,7 @@ export function ThemePanel() {
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-xs theme-text-muted">Changes accent colors to match landing page themes.</p>
+            <p className="mt-1 text-[10px] theme-text-muted">Changes accent colors to match landing page themes.</p>
           </div>
         </div>
       )}
