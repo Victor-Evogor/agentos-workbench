@@ -21,7 +21,11 @@ export enum AgentOSChunkType {
   ERROR = "error",
   METADATA_UPDATE = "metadata_update",
   WORKFLOW_UPDATE = "workflow_update",
-  AGENCY_UPDATE = "agency_update"
+  AGENCY_UPDATE = "agency_update",
+  /** RAG retrieval results chunk - contains retrieved context */
+  RAG_RETRIEVAL = "rag_retrieval",
+  /** RAG ingestion status chunk - reports document ingestion progress */
+  RAG_INGESTION = "rag_ingestion"
 }
 
 export interface AgentOSBaseChunk {
@@ -129,6 +133,53 @@ export interface AgentOSMetadataUpdateChunk extends AgentOSBaseChunk {
   updates: Record<string, unknown>;
 }
 
+/**
+ * RAG retrieval result chunk - emitted when context is retrieved from RAG memory.
+ * Contains the retrieved chunks and their similarity scores.
+ */
+export interface AgentOSRagRetrievalChunk extends AgentOSBaseChunk {
+  type: AgentOSChunkType.RAG_RETRIEVAL;
+  /** The original query used for retrieval */
+  query: string;
+  /** Retrieved chunks with content and scores */
+  retrievedChunks: Array<{
+    /** Unique identifier for the chunk */
+    chunkId: string;
+    /** Parent document identifier */
+    documentId: string;
+    /** The text content of the chunk */
+    content: string;
+    /** Similarity score (0-1, higher is more relevant) */
+    score: number;
+    /** Optional chunk metadata */
+    metadata?: Record<string, unknown>;
+  }>;
+  /** Total number of results found (may be more than returned) */
+  totalResults: number;
+  /** Processing time in milliseconds */
+  processingTimeMs?: number;
+}
+
+/**
+ * RAG ingestion status chunk - emitted when documents are ingested into RAG memory.
+ * Reports the status and results of the ingestion operation.
+ */
+export interface AgentOSRagIngestionChunk extends AgentOSBaseChunk {
+  type: AgentOSChunkType.RAG_INGESTION;
+  /** Document identifier */
+  documentId: string;
+  /** Collection the document was ingested into */
+  collectionId: string;
+  /** Ingestion status */
+  status: 'success' | 'partial' | 'failed';
+  /** Number of chunks created from the document */
+  chunksCreated?: number;
+  /** Error message if ingestion failed */
+  errorMessage?: string;
+  /** Processing time in milliseconds */
+  processingTimeMs?: number;
+}
+
 export type AgentOSResponse =
   | AgentOSBaseChunk
   | AgentOSTextDeltaChunk
@@ -138,5 +189,7 @@ export type AgentOSResponse =
   | AgentOSFinalResponseChunk
   | AgentOSMetadataUpdateChunk
   | AgentOSWorkflowUpdateChunk
-  | AgentOSAgencyUpdateChunk;
+  | AgentOSAgencyUpdateChunk
+  | AgentOSRagRetrievalChunk
+  | AgentOSRagIngestionChunk;
 
