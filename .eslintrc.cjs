@@ -31,6 +31,13 @@ module.exports = {
       }
     },
     {
+      files: ["demo-automation/**/*.ts"],
+      parserOptions: {
+        project: "./demo-automation/tsconfig.json",
+        tsconfigRootDir: __dirname
+      }
+    },
+    {
       // Files excluded from tsconfig.json need separate handling
       files: ["src/lib/localAgentRuntime.ts", "src/lib/localWorkflowLibrary.ts"],
       parserOptions: {

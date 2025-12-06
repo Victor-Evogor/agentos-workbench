@@ -1,0 +1,19 @@
+# Output directories
+output/
+dist/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Debug files
+*.log
+debug-*.png
+
+
+
+
+
