@@ -45,18 +45,44 @@ export class BrowserAgent {
     await this.page.goto(this.baseUrl);
     await this.page.waitForLoadState('networkidle');
     
-    // Close any tour overlays
-    try {
-      await this.page.click('button:has-text("Close")', { timeout: 2000 });
-    } catch {
-      // No tour overlay
-    }
+    // Dismiss any tour/intro overlays
+    await this.dismissOverlays();
     
     // Switch to dark mode for best visuals
     try {
-      await this.page.click('button[name="Switch to dark mode"]', { timeout: 2000 });
+      await this.page.click('button[name="Switch to dark mode"]', { timeout: 1500 });
     } catch {
       // Already in dark mode
+    }
+    
+    // Wait a beat for UI to settle
+    await this.page.waitForTimeout(300);
+  }
+
+  private async dismissOverlays(): Promise<void> {
+    if (!this.page) return;
+    
+    const dismissSelectors = [
+      'button:has-text("Don\'t show again")',
+      'button:has-text("Skip")',
+      'button:has-text("Close")',
+      'button:has-text("Got it")',
+      'button:has-text("Dismiss")',
+      '[data-testid="tour-close"]',
+      '[aria-label="Close tour"]',
+      '[aria-label="Dismiss"]',
+    ];
+    
+    for (const selector of dismissSelectors) {
+      try {
+        const btn = await this.page.$(selector);
+        if (btn) {
+          await btn.click();
+          await this.page.waitForTimeout(200);
+        }
+      } catch {
+        // Button not found or not clickable
+      }
     }
   }
 
@@ -69,7 +95,7 @@ export class BrowserAgent {
     await this.recorder.startRecording(script.id);
     
     // Initial pause for viewer orientation
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(300);
 
     for (const step of script.steps) {
       await this.executeStep(step);
@@ -92,7 +118,7 @@ export class BrowserAgent {
         if (step.selector) {
           await this.highlight(step.selector);
           await this.page.click(step.selector);
-          await this.page.waitForTimeout(300);
+          await this.page.waitForTimeout(200);
         } else if (step.value) {
           await this.page.goto(step.value);
         }
@@ -109,11 +135,11 @@ export class BrowserAgent {
       case 'fill':
         if (!step.selector || !step.value) throw new Error('Fill requires selector and value');
         await this.page.click(step.selector);
-        await this.page.waitForTimeout(120);
+        await this.page.waitForTimeout(80);
         // Type briskly for tighter timing
         await this.page.fill(step.selector, '');
         await this.page.type(step.selector, step.value, { delay: 10 });
-        await this.page.waitForTimeout(150);
+        await this.page.waitForTimeout(100);
         break;
 
       case 'hover':
@@ -179,20 +205,20 @@ export const DEMO_SCRIPTS: Record<string, DemoScript> = {
     title: 'Creating an AI Agent',
     description: 'Build a custom AI persona from scratch',
     steps: [
-      { action: 'caption', caption: { text: '◆ Creating a new AI Agent', duration: 3000, position: 'top', style: 'highlight' } },
-      { action: 'wait', timeout: 1000 },
+      { action: 'caption', caption: { text: 'Create AI Agent', duration: 2000, position: 'top', style: 'highlight' } },
+      { action: 'wait', timeout: 400 },
       { action: 'click', selector: 'button[role="tab"]:has-text("Persona")' },
-      { action: 'wait', timeout: 500 },
-      { action: 'caption', caption: { text: 'Select a persona template or start from scratch', duration: 4000, position: 'bottom' } },
-      { action: 'hover', selector: 'button:has-text("Wizard")', timeout: 800 },
+      { action: 'wait', timeout: 300 },
+      { action: 'caption', caption: { text: 'Choose template or start fresh', duration: 2500, position: 'bottom' } },
+      { action: 'hover', selector: 'button:has-text("Wizard")', timeout: 500 },
       { action: 'click', selector: 'button:has-text("Wizard")' },
-      { action: 'wait', timeout: 1000 },
-      { action: 'caption', caption: { text: '→ Configure personality traits and communication style', duration: 4000, position: 'bottom' } },
+      { action: 'wait', timeout: 400 },
+      { action: 'caption', caption: { text: 'Configure personality & style', duration: 2500, position: 'bottom' } },
+      { action: 'wait', timeout: 1200 },
+      { action: 'caption', caption: { text: 'Add tools, memory, guardrails', duration: 2500, position: 'bottom', style: 'code' } },
       { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: 'Define capabilities: tools, memory, guardrails', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '✓ Agent ready for deployment', duration: 3000, position: 'center', style: 'highlight' } },
-      { action: 'wait', timeout: 2000 },
+      { action: 'caption', caption: { text: '✓ Ready to deploy', duration: 1800, position: 'center', style: 'success' } },
+      { action: 'wait', timeout: 1000 },
     ],
   },
 
@@ -201,22 +227,18 @@ export const DEMO_SCRIPTS: Record<string, DemoScript> = {
     title: 'Multi-Agent Collaboration',
     description: 'Orchestrate multiple agents working together',
     steps: [
-      { action: 'caption', caption: { text: '◆ Multi-Agent Agency Setup', duration: 3000, position: 'top', style: 'highlight' } },
-      { action: 'wait', timeout: 1000 },
+      { action: 'caption', caption: { text: 'Multi-Agent System', duration: 2000, position: 'top', style: 'highlight' } },
+      { action: 'wait', timeout: 400 },
       { action: 'click', selector: 'button[role="tab"]:has-text("Agency")' },
-      { action: 'wait', timeout: 500 },
-      { action: 'caption', caption: { text: 'Creating an agency with 3 specialized agents', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '→ Researcher: Gathers information from sources', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '→ Analyst: Processes and synthesizes data', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '→ Writer: Generates final output', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: 'Agents communicate via message bus', duration: 4000, position: 'bottom', style: 'code' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '✓ Task completed collaboratively', duration: 3000, position: 'center', style: 'highlight' } },
-      { action: 'wait', timeout: 2000 },
+      { action: 'wait', timeout: 300 },
+      { action: 'caption', caption: { text: 'Building 3-agent team', duration: 2000, position: 'bottom' } },
+      { action: 'wait', timeout: 1200 },
+      { action: 'caption', caption: { text: 'Researcher → Analyst → Writer', duration: 2500, position: 'bottom', style: 'code' } },
+      { action: 'wait', timeout: 1500 },
+      { action: 'caption', caption: { text: 'Message bus coordination', duration: 2000, position: 'bottom' } },
+      { action: 'wait', timeout: 1200 },
+      { action: 'caption', caption: { text: '✓ Collaborative task complete', duration: 1800, position: 'center', style: 'success' } },
+      { action: 'wait', timeout: 1000 },
     ],
   },
 
@@ -225,18 +247,16 @@ export const DEMO_SCRIPTS: Record<string, DemoScript> = {
     title: 'RAG Memory System',
     description: 'Semantic memory retrieval in action',
     steps: [
-      { action: 'caption', caption: { text: '◆ RAG Memory Dashboard', duration: 3000, position: 'top', style: 'highlight' } },
+      { action: 'caption', caption: { text: 'RAG Memory', duration: 2000, position: 'top', style: 'highlight' } },
+      { action: 'wait', timeout: 400 },
+      { action: 'caption', caption: { text: 'Upload → Chunk → Embed', duration: 2500, position: 'bottom', style: 'code' } },
+      { action: 'wait', timeout: 1500 },
+      { action: 'caption', caption: { text: '"What are the key findings?"', duration: 2200, position: 'bottom' } },
+      { action: 'wait', timeout: 1400 },
+      { action: 'caption', caption: { text: 'Semantic search retrieval', duration: 2000, position: 'bottom' } },
+      { action: 'wait', timeout: 1200 },
+      { action: 'caption', caption: { text: '✓ Context injected', duration: 1800, position: 'center', style: 'success' } },
       { action: 'wait', timeout: 1000 },
-      { action: 'caption', caption: { text: 'Uploading documents to vector store', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: 'Automatic chunking and embedding generation', duration: 4000, position: 'bottom', style: 'code' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '→ Querying: "What are the key findings?"', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: 'Semantic search retrieves relevant chunks', duration: 4000, position: 'bottom' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '✓ Context injected into agent prompt', duration: 3000, position: 'center', style: 'highlight' } },
-      { action: 'wait', timeout: 2000 },
     ],
   },
 
@@ -245,24 +265,18 @@ export const DEMO_SCRIPTS: Record<string, DemoScript> = {
     title: 'Planning Engine',
     description: 'Multi-step task decomposition and execution',
     steps: [
-      { action: 'caption', caption: { text: '◆ Planning Engine Demo', duration: 3000, position: 'top', style: 'highlight' } },
-      { action: 'wait', timeout: 1000 },
+      { action: 'caption', caption: { text: 'Planning Engine', duration: 2000, position: 'top', style: 'highlight' } },
+      { action: 'wait', timeout: 400 },
       { action: 'click', selector: 'button[role="tab"]:has-text("Workflow")' },
-      { action: 'wait', timeout: 500 },
-      { action: 'caption', caption: { text: 'Goal: "Deploy a new feature to production"', duration: 4000, position: 'bottom', style: 'code' } },
-      { action: 'wait', timeout: 2000 },
-      { action: 'caption', caption: { text: '→ Step 1: Write unit tests', duration: 3000, position: 'bottom' } },
-      { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: '→ Step 2: Run CI/CD pipeline', duration: 3000, position: 'bottom' } },
-      { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: '→ Step 3: Review and approve', duration: 3000, position: 'bottom' } },
-      { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: '→ Step 4: Deploy to staging', duration: 3000, position: 'bottom' } },
-      { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: '→ Step 5: Monitor and verify', duration: 3000, position: 'bottom' } },
-      { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: '✓ Plan executed successfully', duration: 3000, position: 'center', style: 'highlight' } },
-      { action: 'wait', timeout: 2000 },
+      { action: 'wait', timeout: 300 },
+      { action: 'caption', caption: { text: 'Goal: Deploy feature to prod', duration: 2500, position: 'bottom', style: 'code' } },
+      { action: 'wait', timeout: 1200 },
+      { action: 'caption', caption: { text: '1. Test → 2. CI/CD → 3. Review', duration: 2200, position: 'bottom' } },
+      { action: 'wait', timeout: 1400 },
+      { action: 'caption', caption: { text: '4. Stage → 5. Monitor', duration: 2000, position: 'bottom' } },
+      { action: 'wait', timeout: 1200 },
+      { action: 'caption', caption: { text: '✓ Plan executed', duration: 1800, position: 'center', style: 'success' } },
+      { action: 'wait', timeout: 1000 },
     ],
   },
 
@@ -271,22 +285,21 @@ export const DEMO_SCRIPTS: Record<string, DemoScript> = {
     title: 'Real-time Streaming',
     description: 'Token-level response streaming',
     steps: [
-      { action: 'caption', caption: { text: '◆ Streaming Response Demo', duration: 2000, position: 'top', style: 'highlight' } },
-      { action: 'wait', timeout: 400 },
-      { action: 'click', selector: 'button[role="tab"]:has-text("Compose")', timeout: 200 },
+      { action: 'caption', caption: { text: 'Real-time Streaming', duration: 1800, position: 'top', style: 'highlight' } },
+      { action: 'wait', timeout: 300 },
+      { action: 'click', selector: 'button[role="tab"]:has-text("Compose")', timeout: 100 },
       { action: 'wait', timeout: 200 },
-      { action: 'caption', caption: { text: 'Sending request to agent...', duration: 1200, position: 'bottom' } },
-      { action: 'wait', timeout: 150 },
-      { action: 'fill', selector: 'textarea[name="input"]', value: 'Stream a short response about the AgentOS streaming demo.' },
-      { action: 'wait', timeout: 120 },
-      { action: 'click', selector: 'button[type="submit"]', timeout: 200 },
-      { action: 'wait', timeout: 600 },
-      { action: 'caption', caption: { text: '→ Tokens streaming in real-time', duration: 2500, position: 'bottom', style: 'code' } },
+      { action: 'fill', selector: 'textarea[name="input"]', value: 'Explain token streaming in 2 sentences.' },
+      { action: 'wait', timeout: 100 },
+      { action: 'caption', caption: { text: 'Sending request...', duration: 800, position: 'bottom' } },
+      { action: 'click', selector: 'button[type="submit"]', timeout: 100 },
+      { action: 'wait', timeout: 500 },
+      { action: 'caption', caption: { text: 'stream.on("token", render)', duration: 2000, position: 'bottom', style: 'code' } },
       { action: 'wait', timeout: 2200 },
-      { action: 'caption', caption: { text: 'Latency: <50ms per token', duration: 1800, position: 'bottom' } },
-      { action: 'wait', timeout: 1500 },
-      { action: 'caption', caption: { text: '✓ Response complete', duration: 2000, position: 'center', style: 'highlight' } },
-      { action: 'wait', timeout: 1000 },
+      { action: 'caption', caption: { text: '< 50ms latency per token', duration: 1500, position: 'bottom' } },
+      { action: 'wait', timeout: 1800 },
+      { action: 'caption', caption: { text: '✓ Complete', duration: 1200, position: 'center', style: 'success' } },
+      { action: 'wait', timeout: 800 },
     ],
   },
 };

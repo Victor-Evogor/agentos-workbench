@@ -14,7 +14,7 @@ export interface CaptionConfig {
   text: string;
   duration: number;
   position?: 'top' | 'center' | 'bottom';
-  style?: 'default' | 'highlight' | 'code' | 'warning';
+  style?: 'default' | 'highlight' | 'code' | 'warning' | 'success';
 }
 
 const DEFAULT_CONFIG: RecorderConfig = {
@@ -84,63 +84,100 @@ export class DemoRecorder {
 
     await this.page.addStyleTag({
       content: `
+        @keyframes captionSlideIn {
+          0% { opacity: 0; transform: translateY(12px) scale(0.96); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes captionSlideOut {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 4px 24px rgba(139, 92, 246, 0.3); }
+          50% { box-shadow: 0 4px 32px rgba(139, 92, 246, 0.5); }
+        }
+        
         #demo-caption-overlay {
           position: fixed;
           left: 50%;
           transform: translateX(-50%);
           z-index: 999999;
           pointer-events: none;
-          transition: opacity 0.3s ease, transform 0.3s ease;
           opacity: 0;
         }
         #demo-caption-overlay.visible {
-          opacity: 1;
+          animation: captionSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        #demo-caption-overlay.top { top: 80px; }
+        #demo-caption-overlay.hiding {
+          animation: captionSlideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        #demo-caption-overlay.top { top: 60px; }
         #demo-caption-overlay.center { top: 50%; transform: translate(-50%, -50%); }
-        #demo-caption-overlay.bottom { bottom: 80px; }
+        #demo-caption-overlay.bottom { bottom: 60px; }
         
         .caption-default {
-          background: rgba(0, 0, 0, 0.85);
-          color: white;
-          padding: 16px 32px;
-          border-radius: 12px;
-          font-family: 'Inter', system-ui, sans-serif;
-          font-size: 28px;
-          font-weight: 600;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-          backdrop-filter: blur(8px);
+          background: rgba(10, 10, 15, 0.88);
+          color: #f8fafc;
+          padding: 14px 28px;
+          border-radius: 14px;
+          font-family: 'Inter', -apple-system, system-ui, sans-serif;
+          font-size: 22px;
+          font-weight: 500;
+          letter-spacing: -0.01em;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+          backdrop-filter: blur(16px) saturate(180%);
+          border: 1px solid rgba(255,255,255,0.08);
         }
         .caption-highlight {
-          background: linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4);
+          background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #06b6d4 100%);
+          background-size: 200% auto;
           color: white;
-          padding: 16px 32px;
-          border-radius: 12px;
-          font-family: 'Inter', system-ui, sans-serif;
-          font-size: 28px;
-          font-weight: 700;
-          box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+          padding: 14px 28px;
+          border-radius: 14px;
+          font-family: 'Inter', -apple-system, system-ui, sans-serif;
+          font-size: 22px;
+          font-weight: 600;
+          letter-spacing: -0.01em;
+          box-shadow: 0 4px 24px rgba(139, 92, 246, 0.4);
+          animation: pulse 2s ease-in-out infinite;
         }
         .caption-code {
-          background: rgba(15, 23, 42, 0.95);
-          color: #4ADE80;
-          padding: 16px 32px;
-          border-radius: 12px;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace;
-          font-size: 24px;
+          background: rgba(2, 6, 23, 0.92);
+          color: #22d3ee;
+          padding: 12px 24px;
+          border-radius: 10px;
+          font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+          font-size: 18px;
           font-weight: 500;
-          border: 1px solid rgba(74, 222, 128, 0.3);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+          letter-spacing: -0.02em;
+          border: 1px solid rgba(34, 211, 238, 0.2);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(34, 211, 238, 0.1);
+          backdrop-filter: blur(12px);
         }
         .caption-warning {
-          background: rgba(245, 158, 11, 0.95);
-          color: black;
-          padding: 16px 32px;
-          border-radius: 12px;
-          font-family: 'Inter', system-ui, sans-serif;
-          font-size: 28px;
+          background: linear-gradient(135deg, #f59e0b, #fbbf24);
+          color: #1c1917;
+          padding: 14px 28px;
+          border-radius: 14px;
+          font-family: 'Inter', -apple-system, system-ui, sans-serif;
+          font-size: 22px;
           font-weight: 600;
-          box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+          box-shadow: 0 4px 24px rgba(245, 158, 11, 0.35);
+        }
+        .caption-success {
+          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+          color: white;
+          padding: 14px 28px;
+          border-radius: 14px;
+          font-family: 'Inter', -apple-system, system-ui, sans-serif;
+          font-size: 22px;
+          font-weight: 600;
+          letter-spacing: -0.01em;
+          box-shadow: 0 4px 24px rgba(16, 185, 129, 0.35);
         }
       `,
     });
@@ -201,6 +238,8 @@ export class DemoRecorder {
       const overlay = document.getElementById('demo-caption-overlay');
       if (overlay) {
         overlay.classList.remove('visible');
+        overlay.classList.add('hiding');
+        setTimeout(() => overlay.classList.remove('hiding'), 200);
       }
     });
   }
