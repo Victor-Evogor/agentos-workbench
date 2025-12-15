@@ -8,3 +8,4 @@ node_modules/
 test-screenshots/
 playwright-report/
 test-results/
+*-lock.yaml
