@@ -14,7 +14,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
       - name: Detect package manager
         id: pm
         run: |
@@ -62,5 +61,4 @@ jobs:
           else
             echo "No vitest config found; skipping coverage check."
           fi
-
 
