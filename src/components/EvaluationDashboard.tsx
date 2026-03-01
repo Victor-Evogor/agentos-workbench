@@ -26,6 +26,14 @@ import { Badge } from './ui/Badge';
 import { Tabs } from './ui/Tabs';
 import { Progress } from './ui/Progress';
 
+const DEFAULT_EVALUATION_API_ENDPOINT = (() => {
+  const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
+  if (!configuredBaseUrl) {
+    return '/api/evaluation';
+  }
+  return `${configuredBaseUrl.replace(/\/+$/, '')}/api/evaluation`;
+})();
+
 // Types
 interface EvaluationRun {
   id: string;
@@ -77,7 +85,7 @@ interface EvaluationDashboardProps {
  * Evaluation dashboard component
  */
 export function EvaluationDashboard({
-  apiEndpoint = '/api/evaluation',
+  apiEndpoint = DEFAULT_EVALUATION_API_ENDPOINT,
   agentId,
   onEvaluationComplete,
 }: EvaluationDashboardProps) {
@@ -95,10 +103,11 @@ export function EvaluationDashboard({
     setLoading(true);
     try {
       const response = await fetch(`${apiEndpoint}/runs`);
-      if (response.ok) {
-        const data = await response.json();
-        setRuns(data || []);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch evaluation runs (${response.status})`);
       }
+      const data = await response.json();
+      setRuns(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch evaluation runs:', error);
       // Use mock data
@@ -112,10 +121,11 @@ export function EvaluationDashboard({
   const fetchResults = useCallback(async (runId: string) => {
     try {
       const response = await fetch(`${apiEndpoint}/runs/${runId}/results`);
-      if (response.ok) {
-        const data = await response.json();
-        setResults(data || []);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch run results (${response.status})`);
       }
+      const data = await response.json();
+      setResults(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch results:', error);
       setResults(getMockResults());
@@ -126,10 +136,11 @@ export function EvaluationDashboard({
   const fetchTestCases = useCallback(async () => {
     try {
       const response = await fetch(`${apiEndpoint}/test-cases`);
-      if (response.ok) {
-        const data = await response.json();
-        setTestCases(data || []);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch test cases (${response.status})`);
       }
+      const data = await response.json();
+      setTestCases(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch test cases:', error);
       setTestCases(getMockTestCases());
@@ -159,28 +170,31 @@ export function EvaluationDashboard({
         body: JSON.stringify({ agentId, testCaseIds: testCases.map(tc => tc.id) }),
       });
 
-      if (response.ok) {
-        const run = await response.json();
-        setRuns(prev => [run, ...prev]);
-        setSelectedRun(run);
-
-        // Simulate progress
-        const interval = setInterval(() => {
-          setRunProgress(prev => {
-            if (prev >= 100) {
-              clearInterval(interval);
-              setIsRunning(false);
-              onEvaluationComplete?.(run);
-              return 100;
-            }
-            return prev + 10;
-          });
-        }, 500);
+      if (!response.ok) {
+        throw new Error(`Failed to start evaluation (${response.status})`);
       }
+
+      const run = (await response.json()) as EvaluationRun;
+      setRuns(prev => [run, ...prev]);
+      setSelectedRun(run);
+
+      // Simulate progress
+      const interval = setInterval(() => {
+        setRunProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setIsRunning(false);
+            onEvaluationComplete?.(run);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 500);
+      return;
     } catch (error) {
       console.error('Failed to start evaluation:', error);
-      setIsRunning(false);
     }
+    setIsRunning(false);
   };
 
   // Get status icon
@@ -669,6 +683,5 @@ function getMockTestCases(): TestCase[] {
 }
 
 export default EvaluationDashboard;
-
 
 

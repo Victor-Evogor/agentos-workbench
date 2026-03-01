@@ -1,11 +1,37 @@
 import { FastifyInstance } from 'fastify';
-import { mockEvaluationRuns } from '../mockData';
+import { evaluationStore, type StartEvaluationRunInput } from '../services/evaluationStore';
 
 /**
  * Registers Evaluation routes.
  * @param fastify The Fastify instance.
  */
 export default async function evaluationRoutes(fastify: FastifyInstance) {
+  const runSchema = {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      name: { type: 'string' },
+      status: { type: 'string', enum: ['pending', 'running', 'completed', 'failed'] },
+      startedAt: { type: 'string' },
+      completedAt: { type: 'string' },
+      totalTests: { type: 'number' },
+      passedTests: { type: 'number' },
+      failedTests: { type: 'number' },
+      averageScore: { type: 'number' },
+      duration: { type: 'number' },
+      stats: {
+        type: 'object',
+        properties: {
+          averageScore: { type: 'number' },
+          duration: { type: 'number' },
+          totals: { type: 'number' },
+          passed: { type: 'number' },
+          failed: { type: 'number' },
+        },
+      },
+    },
+  } as const;
+
   /**
    * Get evaluation runs.
    */
@@ -16,31 +42,18 @@ export default async function evaluationRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              status: { type: 'string', enum: ['pending', 'running', 'completed', 'failed'] },
-              startedAt: { type: 'string' },
-              completedAt: { type: 'string' },
-              totalTests: { type: 'number' },
-              passedTests: { type: 'number' },
-              failedTests: { type: 'number' },
-              averageScore: { type: 'number' }
-            }
-          }
+          items: runSchema,
         }
       }
     }
   }, async () => {
-    return mockEvaluationRuns;
+    return evaluationStore.listRuns();
   });
 
   /**
    * Get specific run results.
    */
-  fastify.get('/runs/:runId/results', {
+  fastify.get<{ Params: { runId: string } }>('/runs/:runId/results', {
     schema: {
       description: 'Get detailed results for a specific evaluation run',
       tags: ['Evaluation'],
@@ -58,8 +71,8 @@ export default async function evaluationRoutes(fastify: FastifyInstance) {
         }
       }
     }
-  }, async () => {
-    return [];
+  }, async (request) => {
+    return evaluationStore.getRunResults(request.params.runId);
   });
 
   /**
@@ -77,7 +90,7 @@ export default async function evaluationRoutes(fastify: FastifyInstance) {
       }
     }
   }, async () => {
-    return [];
+    return evaluationStore.listTestCases();
   });
 
   /**
@@ -90,21 +103,19 @@ export default async function evaluationRoutes(fastify: FastifyInstance) {
       body: {
         type: 'object',
         properties: {
+          agentId: { type: 'string' },
           name: { type: 'string' },
           testCaseIds: { type: 'array', items: { type: 'string' } }
         }
       },
       response: {
         200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            runId: { type: 'string' }
-          }
+          ...runSchema,
         }
       }
     }
-  }, async () => {
-    return { status: 'started', runId: 'run-new' };
+  }, async (request) => {
+    const payload = (request.body ?? {}) as StartEvaluationRunInput;
+    return evaluationStore.startRun(payload);
   });
 }

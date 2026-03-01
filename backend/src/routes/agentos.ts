@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { AgentOSResponseChunkType } from '@framers/agentos';
-import { agentos } from '../lib/agentos';
+import { getAgentOS } from '../lib/agentos';
 import {
   mockExtensions,
   mockTools,
@@ -8,6 +7,9 @@ import {
   mockGuardrails,
   mockExecutions
 } from '../mockData';
+
+const TEXT_DELTA_CHUNK_TYPE = 'text_delta';
+const ERROR_CHUNK_TYPE = 'error';
 
 /**
  * Registers AgentOS routes.
@@ -46,6 +48,7 @@ export default async function agentosRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    const agentos = await getAgentOS();
     const { userId, personaId, input, conversationId } = request.body as any;
     
     // We consume the generator to return a simple response
@@ -61,11 +64,11 @@ export default async function agentosRoutes(fastify: FastifyInstance) {
     });
 
     for await (const chunk of iterator) {
-        if (chunk.type === AgentOSResponseChunkType.TEXT_DELTA && chunk.textDelta) {
+        if (chunk.type === TEXT_DELTA_CHUNK_TYPE && chunk.textDelta) {
             fullText += chunk.textDelta;
         }
         // Handle error chunks
-        if (chunk.type === AgentOSResponseChunkType.ERROR) {
+        if (chunk.type === ERROR_CHUNK_TYPE) {
             throw chunk; 
         }
     }
@@ -98,6 +101,7 @@ export default async function agentosRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    const agentos = await getAgentOS();
     const { userId, mode, conversationId, messages } = request.query as any;
     
     // Manually set CORS headers because we are using reply.raw
@@ -166,6 +170,7 @@ export default async function agentosRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request) => {
+    const agentos = await getAgentOS();
     const { userId } = request.query as any;
     const personas = await agentos.listAvailablePersonas(userId);
     return { personas };
@@ -188,6 +193,7 @@ export default async function agentosRoutes(fastify: FastifyInstance) {
       }
     }
   }, async () => {
+    const agentos = await getAgentOS();
     const definitions = agentos.listWorkflowDefinitions();
     return { definitions };
   });

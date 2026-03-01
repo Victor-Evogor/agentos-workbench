@@ -234,7 +234,17 @@ type StreamOptions = {
   model?: string;
   workflowRequest?: WorkflowRequestPayload;
   agencyRequest?: AgencyRequestPayload;
+  signal?: AbortSignal;
 };
+
+function isAbortError(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "name" in error &&
+    (error as { name?: string }).name === "AbortError"
+  );
+}
 
 // Filters for listing personas from backend
 export type ListPersonaFilters = {
@@ -243,9 +253,23 @@ export type ListPersonaFilters = {
   search?: string;
 };
 
+export function resolveWorkbenchApiBaseUrl(): string {
+  const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/+$/, '');
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+
+  const fallbackPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '3001';
+  return `http://localhost:${fallbackPort}`;
+}
+
 /**
  * Thin client wrapper for calling the AgentOS-enabled backend from the workbench UI.
- * - Resolves base URL from `VITE_API_URL` or current origin (dev defaults to `http://localhost:3001` from Vite).
+ * - Resolves base URL from `VITE_API_URL` or current origin (works with Vite proxy by default).
  * - Provides helpers for streaming chat, listing personas/workflows/models, and extension/tool operations.
  * @public
  */
@@ -253,10 +277,7 @@ class AgentOSClient {
   private baseUrl: string;
 
   constructor() {
-    const devDefault = (typeof window !== 'undefined' && window.location && window.location.port === '5175')
-      ? 'http://localhost:3001'
-      : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
-    this.baseUrl = import.meta.env.VITE_API_URL || devDefault;
+    this.baseUrl = resolveWorkbenchApiBaseUrl();
   }
 
   // ... existing methods ...
@@ -333,7 +354,8 @@ class AgentOSClient {
       const url = `${this.baseUrl}/api/agentos/stream?${params.toString()}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Accept': 'text/event-stream' }
+        headers: { 'Accept': 'text/event-stream' },
+        signal: opts?.signal,
       });
 
       if (!response.ok) {
@@ -390,6 +412,9 @@ class AgentOSClient {
         }
       }
     } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
       onError?.(error as Error);
       throw error;
     }
@@ -716,21 +741,24 @@ class AgentOSClient {
       onError?: (error: Error) => void;
     }
   ): () => void {
-    // Create an AbortController for cancellation (future use)
     const abortController = new AbortController();
-    
-    // Start the stream via GET SSE
-    this.streamMessage(
+
+    // Start the stream via GET SSE.
+    void this.streamMessage(
       params.personaId,
       params.messages[params.messages.length - 1].content,
       params.sessionId,
       handlers.onChunk,
       handlers.onDone,
       handlers.onError,
-      { model: params.model, workflowRequest: params.workflowRequest, agencyRequest: params.agencyRequest }
+      {
+        model: params.model,
+        workflowRequest: params.workflowRequest,
+        agencyRequest: params.agencyRequest,
+        signal: abortController.signal,
+      }
     );
-    
-    // Return cleanup function
+
     return () => {
       abortController.abort();
     };
@@ -923,7 +951,7 @@ function normalizeAgencySeatRecord(raw: unknown): AgencySeatRecord {
  * List agency executions for a user
  */
 export async function listAgencyExecutions(userId: string, limit?: number): Promise<AgencyExecutionRecord[]> {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3333';
+  const baseUrl = resolveWorkbenchApiBaseUrl();
   const params = new URLSearchParams({ userId });
   if (limit) {
     params.set('limit', String(limit));
@@ -942,7 +970,7 @@ export async function listAgencyExecutions(userId: string, limit?: number): Prom
  * Get a specific agency execution with all seats
  */
 export async function getAgencyExecution(agencyId: string): Promise<{ execution: AgencyExecutionRecord; seats: AgencySeatRecord[] } | null> {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3333';
+  const baseUrl = resolveWorkbenchApiBaseUrl();
   const response = await fetch(`${baseUrl}/api/agentos/agency/executions/${agencyId}`);
   if (!response.ok) {
     if (response.status === 404) {

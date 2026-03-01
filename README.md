@@ -61,14 +61,27 @@ See [`docs/CLIENT_STORAGE_AND_EXPORTS.md`](../../docs/CLIENT_STORAGE_AND_EXPORTS
 1. Copy `.env.example` → `.env.local` (or set env vars in your shell) and point the workbench at your backend:
 
    ```ini
-   VITE_AGENTOS_BASE_URL=http://localhost:3001/agentos
-   VITE_AGENTOS_STREAM_PATH=/stream
+   # Option A: explicit API base URL
+   VITE_API_URL=http://localhost:3001
+
+   # Option B: same-origin `/api/*` with dev proxy target
+   VITE_BACKEND_PORT=3001
+   VITE_BACKEND_HOST=localhost
+   VITE_BACKEND_PROTOCOL=http
    ```
 
-   Leave them unset if you proxy through `/api/agentos`.
-2. In the backend, ensure `AGENTOS_ENABLED=true` (and any provider keys) so `/agentos/*` routes are exposed.
+   `VITE_AGENTOS_*` overrides are still supported for specialized stream/persona/workflow path tuning.
+2. In the backend, ensure provider keys are set and configure runtime if needed:
+
+   ```ini
+   AGENTOS_WORKBENCH_BACKEND_PORT=3001
+   AGENTOS_WORKBENCH_BACKEND_HOST=0.0.0.0
+   AGENTOS_WORKBENCH_EVALUATION_STORE_PATH=../.data/evaluation-store.json
+   AGENTOS_WORKBENCH_PLANNING_STORE_PATH=../.data/planning-store.json
+   ```
+
 3. Start the backend (`pnpm --filter backend dev`) and then run the workbench (`pnpm --filter @framersai/agentos-workbench dev`).
-4. Use the request composer to fire a turn—live `AGENCY_UPDATE` / `WORKFLOW_UPDATE` chunks will populate the timeline automatically.
+4. Use Compose for turns, Evaluation for benchmark runs, and Planning for plan lifecycle experiments.
 
 The client mirrors the streaming contracts from `@framers/agentos`, so backend responses flow straight into the UI with no reshaping.
 
@@ -83,6 +96,10 @@ The client mirrors the streaming contracts from `@framers/agentos`, so backend r
 - `GET  /api/agentos/personas` — list personas (filters: capability, tier, search)
 - `GET  /api/agentos/workflows/definitions` — list workflow definitions
 - `POST /api/agentos/workflows/start` — start a workflow
+- `GET  /api/evaluation/runs` — list persisted evaluation runs
+- `POST /api/evaluation/run` — start a new evaluation run
+- `GET  /api/planning/plans` — list persisted plans
+- `POST /api/planning/plans` — create a new plan
 
 See `docs/BACKEND_API.md` for complete request/response shapes and examples.
 

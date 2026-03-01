@@ -1,12 +1,9 @@
 /**
  * @file PlanningDashboard.tsx
- * @description Dashboard for visualizing and managing agent execution plans.
- * Displays active plans, their steps, dependencies, and execution progress.
- *
- * @module AgentOS-Workbench/Planning
+ * @description Dashboard for visualizing and managing execution plans.
  */
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Play,
   Pause,
@@ -21,13 +18,22 @@ import {
   Zap,
   GitBranch,
   Activity,
+  RefreshCw,
+  SkipForward,
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Progress } from './ui/Progress';
 
-// Types matching the AgentOS planning module
+const DEFAULT_PLANNING_API_ENDPOINT = (() => {
+  const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
+  if (!configuredBaseUrl) {
+    return '/api/planning';
+  }
+  return `${configuredBaseUrl.replace(/\/+$/, '')}/api/planning`;
+})();
+
 interface PlanStep {
   stepId: string;
   description: string;
@@ -49,62 +55,40 @@ interface ExecutionPlan {
   estimatedTokens?: number;
   confidenceScore?: number;
   createdAt: string;
+  updatedAt?: string;
   status: 'draft' | 'executing' | 'paused' | 'completed' | 'failed';
   currentStepIndex: number;
 }
 
-// Mock data for demonstration
-const mockPlans: ExecutionPlan[] = [
-  {
-    planId: 'plan-demo-1',
-    goal: 'Research and summarize AI agent frameworks',
-    steps: [
-      {
-        stepId: 'step-1',
-        description: 'Search for recent AI agent framework releases',
-        actionType: 'tool_call',
-        toolId: 'web-search',
-        status: 'completed',
-        confidence: 0.9,
-        durationMs: 2340,
-      },
-      {
-        stepId: 'step-2',
-        description: 'Analyze key features of each framework',
-        actionType: 'reflection',
-        status: 'completed',
-        dependsOn: ['step-1'],
-        confidence: 0.85,
-        durationMs: 1820,
-      },
-      {
-        stepId: 'step-3',
-        description: 'Compare frameworks against AgentOS',
-        actionType: 'gmi_action',
-        status: 'in_progress',
-        dependsOn: ['step-2'],
-        confidence: 0.8,
-      },
-      {
-        stepId: 'step-4',
-        description: 'Generate summary report',
-        actionType: 'gmi_action',
-        status: 'pending',
-        dependsOn: ['step-3'],
-        confidence: 0.9,
-      },
-    ],
-    estimatedTokens: 15000,
-    confidenceScore: 0.86,
-    createdAt: new Date(Date.now() - 300000).toISOString(),
-    status: 'executing',
-    currentStepIndex: 2,
-  },
-];
+type PlanFilter = 'all' | 'executing' | 'paused' | 'completed' | 'failed';
+type PlanAction = 'pause' | 'resume' | 'advance' | 'rerun';
 
-/**
- * Get icon for step action type
- */
+interface PlanningDashboardProps {
+  apiEndpoint?: string;
+}
+
+function formatStatus(status: ExecutionPlan['status']): string {
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+}
+
+function formatFilterLabel(filter: PlanFilter): string {
+  if (filter === 'all') {
+    return 'All';
+  }
+  return formatStatus(filter);
+}
+
+function formatOutput(output: unknown): string {
+  if (typeof output === 'string') {
+    return output;
+  }
+  try {
+    return JSON.stringify(output, null, 2);
+  } catch {
+    return String(output);
+  }
+}
+
 function getActionIcon(actionType: PlanStep['actionType']) {
   switch (actionType) {
     case 'tool_call':
@@ -124,10 +108,7 @@ function getActionIcon(actionType: PlanStep['actionType']) {
   }
 }
 
-/**
- * Get status icon for a plan step
- */
-function getStatusIcon(status: PlanStep['status']) {
+function getStepStatusIcon(status: PlanStep['status']) {
   switch (status) {
     case 'completed':
       return <CheckCircle2 className="w-4 h-4 text-green-500" />;
@@ -142,10 +123,7 @@ function getStatusIcon(status: PlanStep['status']) {
   }
 }
 
-/**
- * Get badge variant for status
- */
-function getStatusVariant(status: ExecutionPlan['status']): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getPlanStatusVariant(status: ExecutionPlan['status']): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
     case 'executing':
       return 'default';
@@ -158,9 +136,6 @@ function getStatusVariant(status: ExecutionPlan['status']): 'default' | 'seconda
   }
 }
 
-/**
- * PlanStepItem - Renders a single step in the plan
- */
 function PlanStepItem({ step, index }: { step: PlanStep; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -172,6 +147,7 @@ function PlanStepItem({ step, index }: { step: PlanStep; index: number }) {
     >
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
           className="p-1 hover:bg-[var(--color-bg-secondary)] rounded"
           aria-label={expanded ? 'Collapse step details' : 'Expand step details'}
@@ -179,7 +155,7 @@ function PlanStepItem({ step, index }: { step: PlanStep; index: number }) {
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         <span className="text-sm text-[var(--color-text-muted)] w-6">{index + 1}</span>
-        {getStatusIcon(step.status)}
+        {getStepStatusIcon(step.status)}
         <div className="flex items-center gap-2">
           {getActionIcon(step.actionType)}
           <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]">
@@ -187,10 +163,10 @@ function PlanStepItem({ step, index }: { step: PlanStep; index: number }) {
           </span>
         </div>
         <span className="flex-1 text-sm">{step.description}</span>
-        {step.confidence && (
+        {typeof step.confidence === 'number' && (
           <span className="text-xs text-[var(--color-text-muted)]">{Math.round(step.confidence * 100)}% conf</span>
         )}
-        {step.durationMs && (
+        {typeof step.durationMs === 'number' && (
           <span className="text-xs text-[var(--color-text-muted)]">{(step.durationMs / 1000).toFixed(1)}s</span>
         )}
       </div>
@@ -211,7 +187,7 @@ function PlanStepItem({ step, index }: { step: PlanStep; index: number }) {
           {step.error && <div className="text-red-500 p-2 bg-red-500/10 rounded">{step.error}</div>}
           {step.output !== undefined && step.output !== null && (
             <div className="p-2 bg-[var(--color-bg-secondary)] rounded">
-              <pre className="text-xs overflow-auto max-h-32">{JSON.stringify(step.output, null, 2)}</pre>
+              <pre className="text-xs overflow-auto max-h-32">{formatOutput(step.output)}</pre>
             </div>
           )}
         </div>
@@ -220,59 +196,70 @@ function PlanStepItem({ step, index }: { step: PlanStep; index: number }) {
   );
 }
 
-/**
- * PlanCard - Renders a complete execution plan
- */
-function PlanCard({ plan }: { plan: ExecutionPlan }) {
-  const completedSteps = plan.steps.filter((s) => s.status === 'completed').length;
-  const progress = (completedSteps / plan.steps.length) * 100;
+function PlanCard({
+  plan,
+  isBusy,
+  onPause,
+  onResume,
+  onAdvance,
+  onRerun,
+}: {
+  plan: ExecutionPlan;
+  isBusy: boolean;
+  onPause: (planId: string) => void;
+  onResume: (planId: string) => void;
+  onAdvance: (planId: string) => void;
+  onRerun: (planId: string) => void;
+}) {
+  const completedSteps = plan.steps.filter((step) => step.status === 'completed').length;
+  const progress = plan.steps.length > 0 ? (completedSteps / plan.steps.length) * 100 : 0;
 
   return (
     <Card className="p-4">
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-lg">{plan.goal}</h3>
-            <Badge variant={getStatusVariant(plan.status)}>{plan.status}</Badge>
+            <Badge variant={getPlanStatusVariant(plan.status)}>{formatStatus(plan.status)}</Badge>
           </div>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Plan ID: {plan.planId} • Created{' '}
-            {new Date(plan.createdAt).toLocaleString()}
+            Plan ID: {plan.planId} • Created {new Date(plan.createdAt).toLocaleString()}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {plan.status === 'executing' && (
-            <Button variant="outline" size="sm">
-              <Pause className="w-4 h-4 mr-1" /> Pause
-            </Button>
+            <>
+              <Button variant="outline" size="sm" disabled={isBusy} onClick={() => onPause(plan.planId)}>
+                <Pause className="w-4 h-4 mr-1" /> Pause
+              </Button>
+              <Button variant="outline" size="sm" disabled={isBusy} onClick={() => onAdvance(plan.planId)}>
+                <SkipForward className="w-4 h-4 mr-1" /> Advance
+              </Button>
+            </>
           )}
           {plan.status === 'paused' && (
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled={isBusy} onClick={() => onResume(plan.planId)}>
               <Play className="w-4 h-4 mr-1" /> Resume
             </Button>
           )}
-          {(plan.status === 'failed' || plan.status === 'completed') && (
-            <Button variant="outline" size="sm">
+          {(plan.status === 'failed' || plan.status === 'completed' || plan.status === 'paused') && (
+            <Button variant="outline" size="sm" disabled={isBusy} onClick={() => onRerun(plan.planId)}>
               <RotateCcw className="w-4 h-4 mr-1" /> Re-run
             </Button>
           )}
         </div>
       </div>
 
-      {/* Progress and stats */}
       <div className="mb-4 space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span>
             Progress: {completedSteps}/{plan.steps.length} steps
           </span>
-          <span>
-            {plan.confidenceScore && `${Math.round(plan.confidenceScore * 100)}% confidence`}
-          </span>
+          <span>{typeof plan.confidenceScore === 'number' ? `${Math.round(plan.confidenceScore * 100)}% confidence` : ''}</span>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
 
-      {/* Steps */}
       <div className="space-y-2">
         <h4 className="font-medium text-sm text-[var(--color-text-muted)]">Execution Steps</h4>
         {plan.steps.map((step, index) => (
@@ -283,44 +270,155 @@ function PlanCard({ plan }: { plan: ExecutionPlan }) {
   );
 }
 
-/**
- * PlanningDashboard - Main dashboard component
- */
-export function PlanningDashboard() {
-  const [plans, _setPlans] = useState<ExecutionPlan[]>(mockPlans);
-  const [filter, setFilter] = useState<'all' | 'executing' | 'completed' | 'failed'>('all');
+export function PlanningDashboard({ apiEndpoint = DEFAULT_PLANNING_API_ENDPOINT }: PlanningDashboardProps) {
+  const [plans, setPlans] = useState<ExecutionPlan[]>([]);
+  const [filter, setFilter] = useState<PlanFilter>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newGoal, setNewGoal] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
 
-  // Filter plans
-  const filteredPlans = plans.filter((plan) => {
-    if (filter === 'all') return true;
-    return plan.status === filter;
-  });
+  const fetchPlans = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${apiEndpoint}/plans`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch plans (${response.status})`);
+      }
+      const data = await response.json();
+      setPlans(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (fetchError) {
+      console.error('Failed to fetch plans:', fetchError);
+      setError('Planning backend unavailable. Start backend and retry.');
+      setPlans([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiEndpoint]);
 
-  // Stats
-  const stats = {
-    total: plans.length,
-    executing: plans.filter((p) => p.status === 'executing').length,
-    completed: plans.filter((p) => p.status === 'completed').length,
-    failed: plans.filter((p) => p.status === 'failed').length,
-  };
+  useEffect(() => {
+    void fetchPlans();
+  }, [fetchPlans]);
+
+  const filteredPlans = useMemo(
+    () =>
+      plans.filter((plan) => {
+        if (filter === 'all') {
+          return true;
+        }
+        return plan.status === filter;
+      }),
+    [filter, plans]
+  );
+
+  const stats = useMemo(
+    () => ({
+      total: plans.length,
+      executing: plans.filter((plan) => plan.status === 'executing').length,
+      completed: plans.filter((plan) => plan.status === 'completed').length,
+      failed: plans.filter((plan) => plan.status === 'failed').length,
+    }),
+    [plans]
+  );
+
+  const upsertPlan = useCallback((nextPlan: ExecutionPlan) => {
+    setPlans((previous) => {
+      const index = previous.findIndex((plan) => plan.planId === nextPlan.planId);
+      if (index < 0) {
+        return [nextPlan, ...previous];
+      }
+      const copy = [...previous];
+      copy[index] = nextPlan;
+      return copy;
+    });
+  }, []);
+
+  const performPlanAction = useCallback(
+    async (planId: string, action: PlanAction) => {
+      setActivePlanId(planId);
+      try {
+        const response = await fetch(`${apiEndpoint}/plans/${encodeURIComponent(planId)}/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to ${action} plan (${response.status})`);
+        }
+        const updatedPlan = (await response.json()) as ExecutionPlan;
+        upsertPlan(updatedPlan);
+        setError(null);
+      } catch (actionError) {
+        console.error(`Failed to ${action} plan:`, actionError);
+        setError(`Unable to ${action} plan right now.`);
+      } finally {
+        setActivePlanId(null);
+      }
+    },
+    [apiEndpoint, upsertPlan]
+  );
+
+  const handleCreatePlan = useCallback(async () => {
+    const goal = newGoal.trim();
+    if (!goal) {
+      setError('Enter a goal before creating a plan.');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const response = await fetch(`${apiEndpoint}/plans`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create plan (${response.status})`);
+      }
+      const createdPlan = (await response.json()) as ExecutionPlan;
+      setPlans((previous) => [createdPlan, ...previous]);
+      setNewGoal('');
+      setError(null);
+    } catch (createError) {
+      console.error('Failed to create plan:', createError);
+      setError('Unable to create plan right now.');
+    } finally {
+      setCreating(false);
+    }
+  }, [apiEndpoint, newGoal]);
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Planning Engine</h1>
-          <p className="text-[var(--color-text-muted)]">
-            View and manage agent execution plans
-          </p>
+          <p className="text-[var(--color-text-muted)]">Create and manage execution plans for experiments.</p>
         </div>
-        <Button>
-          <Target className="w-4 h-4 mr-2" /> New Plan
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+          <input
+            value={newGoal}
+            onChange={(event) => setNewGoal(event.target.value)}
+            placeholder="Define a new experiment goal..."
+            className="min-w-[16rem] rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-sm"
+          />
+          <Button variant="outline" onClick={() => void fetchPlans()} disabled={loading || creating}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          </Button>
+          <Button onClick={() => void handleCreatePlan()} disabled={creating}>
+            <Target className="w-4 h-4 mr-2" />
+            {creating ? 'Creating...' : 'New Plan'}
+          </Button>
+        </div>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-4 gap-4">
+      {error && (
+        <Card className="p-3 border-red-500/30 bg-red-500/10">
+          <p className="text-sm text-red-500">{error}</p>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-500/10">
@@ -367,36 +465,54 @@ export function PlanningDashboard() {
         </Card>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        {(['all', 'executing', 'completed', 'failed'] as const).map((f) => (
+      <div className="flex flex-wrap gap-2">
+        {(['all', 'executing', 'paused', 'completed', 'failed'] as const).map((currentFilter) => (
           <Button
-            key={f}
-            variant={filter === f ? 'default' : 'outline'}
+            key={currentFilter}
+            variant={filter === currentFilter ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setFilter(f)}
+            onClick={() => setFilter(currentFilter)}
           >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
+            {formatFilterLabel(currentFilter)}
           </Button>
         ))}
       </div>
 
-      {/* Plans list */}
       <div className="space-y-4">
-        {filteredPlans.length === 0 ? (
+        {loading ? (
+          <Card className="p-8 text-center">
+            <p className="text-sm text-[var(--color-text-muted)]">Loading planning data...</p>
+          </Card>
+        ) : filteredPlans.length === 0 ? (
           <Card className="p-8 text-center">
             <Target className="w-12 h-12 mx-auto mb-4 text-[var(--color-text-muted)]" />
             <h3 className="font-medium mb-2">No plans found</h3>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Create a new plan to get started with autonomous goal pursuit.
+              Create a new plan to start running experiments.
             </p>
           </Card>
         ) : (
-          filteredPlans.map((plan) => <PlanCard key={plan.planId} plan={plan} />)
+          filteredPlans.map((plan) => (
+            <PlanCard
+              key={plan.planId}
+              plan={plan}
+              isBusy={activePlanId === plan.planId}
+              onPause={(planId) => {
+                void performPlanAction(planId, 'pause');
+              }}
+              onResume={(planId) => {
+                void performPlanAction(planId, 'resume');
+              }}
+              onAdvance={(planId) => {
+                void performPlanAction(planId, 'advance');
+              }}
+              onRerun={(planId) => {
+                void performPlanAction(planId, 'rerun');
+              }}
+            />
+          ))
         )}
       </div>
     </div>
   );
 }
-
-

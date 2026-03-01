@@ -7,6 +7,7 @@ test('loads home and shows tabs', async ({ page, baseURL }) => {
   await expect(page.getByRole('tab', { name: /Compose/i })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Personas/i })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Agency/i })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Evaluation/i })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Planning/i })).toBeVisible();
 });
-
 

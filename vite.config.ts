@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react-swc";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import path from "path";
 
+const backendPort = process.env.VITE_BACKEND_PORT || process.env.AGENTOS_WORKBENCH_BACKEND_PORT || "3001";
+const backendHost = process.env.VITE_BACKEND_HOST || "localhost";
+const backendProtocol = process.env.VITE_BACKEND_PROTOCOL || "http";
+const backendTarget = process.env.VITE_API_URL || `${backendProtocol}://${backendHost}:${backendPort}`;
+
 export default defineConfig({
   plugins: [
     react(),
@@ -42,7 +47,17 @@ export default defineConfig({
     open: true,
     proxy: {
       "/api/agentos": {
-        target: "http://localhost:3001",
+        target: backendTarget,
+        changeOrigin: true,
+        secure: false
+      },
+      "/api/evaluation": {
+        target: backendTarget,
+        changeOrigin: true,
+        secure: false
+      },
+      "/api/planning": {
+        target: backendTarget,
         changeOrigin: true,
         secure: false
       }

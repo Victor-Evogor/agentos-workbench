@@ -8,6 +8,8 @@ import { AgencyComposer } from "@/components/AgencyComposer";
 import { AgencyManager } from "@/components/AgencyManager";
 import { PersonaCatalog } from "@/components/PersonaCatalog";
 import { WorkflowOverview } from "@/components/WorkflowOverview";
+import EvaluationDashboard from "@/components/EvaluationDashboard";
+import { PlanningDashboard } from "@/components/PlanningDashboard";
 import {
   openAgentOSStream,
   getAvailableModels,
@@ -17,6 +19,7 @@ import {
   getTaskOutcomeAlertRetentionStatus,
   pruneTaskOutcomeAlertHistory,
   setTaskOutcomeAlertAcknowledged,
+  resolveWorkbenchApiBaseUrl,
   type AgentRoleConfig,
   type AgentOSModelInfo,
   type TaskOutcomeAlertHistoryResponse,
@@ -691,15 +694,17 @@ const DEFAULT_PERSONA_ID = "v_researcher";
 const DEMO_PERSONA_SESSION_ID = "demo-persona-session";
 const DEMO_AGENCY_ID = "demo-agency";
 const DEMO_AGENCY_SESSION_ID = "demo-agency-session";
+const LEFT_TABS = [
+  { key: "compose", label: "Compose" },
+  { key: "personas", label: "Personas" },
+  { key: "agency", label: "Agency" },
+  { key: "workflows", label: "Workflows" },
+  { key: "evaluation", label: "Evaluation" },
+  { key: "planning", label: "Planning" },
+] as const;
+type LeftTabKey = typeof LEFT_TABS[number]["key"];
 
 export default function App() {
-  const LEFT_TABS = [
-    { key: "compose", label: "Compose" },
-    { key: "personas", label: "Personas" },
-    { key: "agency", label: "Agency" },
-    { key: "workflows", label: "Workflows" }
-  ] as const;
-  type LeftTabKey = typeof LEFT_TABS[number]["key"];
   const preferredLeftPanel = useUiStore((s) => s.preferredLeftPanel) as LeftTabKey | undefined;
   const setPreferredLeftPanel = useUiStore((s) => s.setPreferredLeftPanel);
   const leftTab: LeftTabKey = LEFT_TABS.some((tab) => tab.key === preferredLeftPanel)
@@ -728,7 +733,7 @@ export default function App() {
   const dismissWelcomeTour = useUiStore((s) => s.dismissWelcomeTour);
   const snoozeWelcomeTour = useUiStore((s) => s.snoozeWelcomeTour);
   const tourSteps = [
-    { selector: '[data-tour="tabs"]', title: 'Panels', body: 'Switch between Compose, Agency, Personas, Workflows, Settings, and About.' },
+    { selector: '[data-tour="tabs"]', title: 'Panels', body: 'Switch between Compose, Agency, Personas, Workflows, Evaluation, Planning, Settings, and About.' },
     { selector: '[data-tour="composer"]', title: 'Compose', body: 'Write prompts, select persona/agency, and submit to start a session.' },
     { selector: '[data-tour="agency-manager"]', title: 'Agency', body: 'Define multi-seat collectives and attach workflows.' },
     { selector: '[data-tour="theme-button"]', title: 'Theme', body: 'Switch theme mode, appearance, and palette (Sakura, Twilight, etc.)' },
@@ -1607,7 +1612,7 @@ export default function App() {
                           outputFormat: agencyPayload.outputFormat || 'markdown',
                         });
 
-                        const baseUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+                        const baseUrl = resolveWorkbenchApiBaseUrl();
                         const eventSource = new EventSource(`${baseUrl}/api/agentos/agency/stream?${params.toString()}`);
 
                         const cleanup = () => {
@@ -1681,6 +1686,8 @@ export default function App() {
                 {leftTab === 'personas' && <PersonaCatalog />}
                 {leftTab === 'agency' && <AgencyManager />}
                 {leftTab === 'workflows' && <WorkflowOverview />}
+                {leftTab === 'evaluation' && <EvaluationDashboard />}
+                {leftTab === 'planning' && <PlanningDashboard />}
               </div>
             </section>
 
