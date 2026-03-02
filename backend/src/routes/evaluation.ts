@@ -6,6 +6,44 @@ import { evaluationStore, type StartEvaluationRunInput } from '../services/evalu
  * @param fastify The Fastify instance.
  */
 export default async function evaluationRoutes(fastify: FastifyInstance) {
+  const metricSchema = {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      score: { type: 'number' },
+      threshold: { type: 'number' },
+      passed: { type: 'boolean' },
+    },
+  } as const;
+
+  const resultSchema = {
+    type: 'object',
+    properties: {
+      testCaseId: { type: 'string' },
+      testCaseName: { type: 'string' },
+      passed: { type: 'boolean' },
+      score: { type: 'number' },
+      actualOutput: { type: 'string' },
+      error: { type: 'string' },
+      duration: { type: 'number' },
+      metrics: {
+        type: 'array',
+        items: metricSchema,
+      },
+    },
+  } as const;
+
+  const testCaseSchema = {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      name: { type: 'string' },
+      input: { type: 'string' },
+      expectedOutput: { type: 'string' },
+      category: { type: 'string' },
+    },
+  } as const;
+
   const runSchema = {
     type: 'object',
     properties: {
@@ -67,7 +105,7 @@ export default async function evaluationRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'array',
-          items: { type: 'object' }
+          items: resultSchema,
         }
       }
     }
@@ -85,7 +123,7 @@ export default async function evaluationRoutes(fastify: FastifyInstance) {
       response: {
         200: {
           type: 'array',
-          items: { type: 'object' }
+          items: testCaseSchema,
         }
       }
     }

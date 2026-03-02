@@ -251,6 +251,7 @@ export function MarketplaceBrowser({
                 <Button
                   size="sm"
                   variant="ghost"
+                  aria-label={`Uninstall ${item.name}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (installation) handleUninstall(installation.installationId);
@@ -387,7 +388,7 @@ export function MarketplaceBrowser({
       <div className="flex items-center justify-between p-4 border-b border-divider">
         <h1 className="text-xl font-semibold">Marketplace</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={fetchItems}>
+          <Button variant="ghost" size="sm" aria-label="Refresh marketplace items" onClick={fetchItems}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -423,6 +424,7 @@ export function MarketplaceBrowser({
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
             size="sm"
+            aria-label="Grid view"
             onClick={() => setViewMode('grid')}
           >
             <Grid className="w-4 h-4" />
@@ -430,6 +432,7 @@ export function MarketplaceBrowser({
           <Button
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
             size="sm"
+            aria-label="List view"
             onClick={() => setViewMode('list')}
           >
             <List className="w-4 h-4" />
@@ -575,6 +578,4 @@ function getMockItems(): MarketplaceItem[] {
 }
 
 export default MarketplaceBrowser;
-
-
 

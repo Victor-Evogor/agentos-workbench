@@ -309,7 +309,7 @@ export function EvaluationDashboard({
                 {formatDuration(result.duration)}
               </td>
               <td className="px-4 py-3 text-right">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label={`View details for ${result.testCaseName}`}>
                   <Eye className="w-4 h-4" />
                 </Button>
               </td>
@@ -383,10 +383,10 @@ export function EvaluationDashboard({
                 </Badge>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label={`View test case ${tc.name}`}>
                   <Eye className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label={`Delete test case ${tc.name}`}>
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
               </div>
@@ -482,10 +482,10 @@ export function EvaluationDashboard({
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" aria-label="Export selected run">
                           <Download className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" aria-label="Re-run selected evaluation">
                           <RotateCcw className="w-4 h-4" />
                         </Button>
                       </div>
@@ -683,5 +683,3 @@ function getMockTestCases(): TestCase[] {
 }
 
 export default EvaluationDashboard;
-
-

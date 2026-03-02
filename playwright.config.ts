@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  timeout: 60_000,
   fullyParallel: true,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
@@ -10,7 +11,7 @@ export default defineConfig({
     screenshot: 'only-on-failure'
   },
   webServer: {
-    command: 'pnpm dev',
+    command: 'VITE_E2E_MODE=true pnpm dev',
     url: 'http://localhost:5175',
     reuseExistingServer: true,
     timeout: 120_000
@@ -21,5 +22,3 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } }
   ]
 });
-
-

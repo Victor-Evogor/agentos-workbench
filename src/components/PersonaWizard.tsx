@@ -131,7 +131,13 @@ export function PersonaWizard({ open, onClose }: PersonaWizardProps) {
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Create New Persona</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Define AI agent personality, config, guardrails, and extensions</p>
           </div>
-          <button onClick={onClose} className="rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close persona wizard"
+            title="Close"
+            className="rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
             <X className="h-5 w-5 text-slate-500" />
           </button>
         </div>
@@ -401,4 +407,3 @@ export function PersonaWizard({ open, onClose }: PersonaWizardProps) {
     </div>
   );
 }
-

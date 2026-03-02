@@ -43,6 +43,14 @@ pnpm build     # production build (emits dist/)
 pnpm preview   # preview the built app
 pnpm lint      # eslint
 pnpm typecheck
+pnpm e2e       # all Playwright suites (including smoke + screenshots)
+pnpm e2e:workbench      # split workbench suites only
+pnpm e2e:core           # tabs/composer/personas/agency/header
+pnpm e2e:eval-planning  # evaluation + planning flows
+pnpm e2e:quality        # responsive/a11y/console scans
+pnpm e2e:screenshots    # screenshot matrix
+pnpm e2e:smoke:pw       # smoke.spec.ts via Playwright
+pnpm e2e:smoke          # legacy smoke script (tsx e2e-test.ts)
 ```
 
 ## Storage, export, and import

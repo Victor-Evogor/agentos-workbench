@@ -293,9 +293,9 @@ function TaskOutcomeHealthView({
         setAlertSnapshot(nextAlertSnapshot);
         setRetentionStatus(nextRetentionStatus);
         setLastPruneSummary(nextRetentionStatus.lastSummary);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!mountedRef.current) return;
-        setError(err?.message || "Failed to fetch task outcome health");
+        setError(err instanceof Error ? err.message : "Failed to fetch task outcome health");
       } finally {
         if (!silent && mountedRef.current) setLoading(false);
       }
@@ -347,9 +347,9 @@ function TaskOutcomeHealthView({
         await setTaskOutcomeAlertAcknowledged(alertId, acknowledged);
         if (!mountedRef.current) return;
         await loadHealth(true);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!mountedRef.current) return;
-        setError(err?.message || "Failed to update alert acknowledgement");
+        setError(err instanceof Error ? err.message : "Failed to update alert acknowledgement");
       } finally {
         if (mountedRef.current) {
           setAcknowledgingAlertId(null);
@@ -368,9 +368,9 @@ function TaskOutcomeHealthView({
       setLastPruneSummary(result.summary);
       setRetentionStatus(result.status);
       await loadHealth(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!mountedRef.current) return;
-      setError(err?.message || "Failed to prune alert history");
+      setError(err instanceof Error ? err.message : "Failed to prune alert history");
     } finally {
       if (mountedRef.current) {
         setPruningAlerts(false);
@@ -705,6 +705,7 @@ const LEFT_TABS = [
 type LeftTabKey = typeof LEFT_TABS[number]["key"];
 
 export default function App() {
+  const disableAutoWelcomeTour = import.meta.env.VITE_E2E_MODE === "true";
   const preferredLeftPanel = useUiStore((s) => s.preferredLeftPanel) as LeftTabKey | undefined;
   const setPreferredLeftPanel = useUiStore((s) => s.setPreferredLeftPanel);
   const leftTab: LeftTabKey = LEFT_TABS.some((tab) => tab.key === preferredLeftPanel)
@@ -1044,13 +1045,16 @@ export default function App() {
 
   // Show welcome tour on first load unless dismissed or snoozed
   useEffect(() => {
+    if (disableAutoWelcomeTour) {
+      return;
+    }
     if (!welcomeTourDismissed) {
       const now = Date.now();
       if (!welcomeTourSnoozeUntil || now >= welcomeTourSnoozeUntil) {
         setShowTour(true);
       }
     }
-  }, [welcomeTourDismissed, welcomeTourSnoozeUntil]);
+  }, [disableAutoWelcomeTour, welcomeTourDismissed, welcomeTourSnoozeUntil]);
 
 
   const resolvePersonaName = useCallback(

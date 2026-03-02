@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_AGENTOS_PERSONAS_PATH?: string;
   readonly VITE_AGENTOS_WITH_CREDENTIALS?: string;
   readonly VITE_AGENTOS_WORKBENCH_USER_ID?: string;
+  readonly VITE_E2E_MODE?: string;
 }
 
 interface ImportMeta {

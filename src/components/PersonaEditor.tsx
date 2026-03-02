@@ -61,7 +61,13 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
               <Save className="h-4 w-4" />
               Save
             </button>
-            <button onClick={onClose} className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close persona editor"
+              title="Close"
+              className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
               <X className="h-5 w-5 text-slate-500" />
             </button>
           </div>
@@ -207,6 +213,9 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
                       <p className="text-xs text-slate-500">{g.description}</p>
                     </div>
                     <button
+                      type="button"
+                      aria-label={`Remove guardrail ${g.displayName}`}
+                      title="Remove guardrail"
                       onClick={() => setDraft(d => ({ ...d, guardrails: d.guardrails.filter((_, i) => i !== idx) }))}
                       className="text-rose-600 hover:text-rose-700"
                     >
@@ -242,6 +251,9 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
                       </a>
                     </div>
                     <button
+                      type="button"
+                      aria-label={`Remove extension ${ext}`}
+                      title="Remove extension"
                       onClick={() => setDraft(d => ({ ...d, extensions: d.extensions.filter((_, i) => i !== idx) }))}
                       className="text-rose-600 hover:text-rose-700"
                     >

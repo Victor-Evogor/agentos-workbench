@@ -440,7 +440,20 @@ class AgentOSClient {
     if (filters?.search) {
       search.set('search', filters.search);
     }
-    const response = await fetch(`${this.baseUrl}/api/agentos/personas?${search.toString()}`, { signal: params?.signal });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/api/agentos/personas?${search.toString()}`, { signal: params?.signal });
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      // Backend may be unavailable in local-only workbench mode.
+      return [];
+    }
+    if (response.status === 404) {
+      // Treat missing backend route as "no remote personas" rather than an application error.
+      return [];
+    }
     if (!response.ok) {
       throw new Error('Failed to fetch personas');
     }

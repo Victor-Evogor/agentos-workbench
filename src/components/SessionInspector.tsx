@@ -861,14 +861,6 @@ export function SessionInspector() {
     }
   }, [handleScroll]);
 
-  const scrollToBottom = useCallback(() => {
-    if (timelineScrollRef.current) {
-      const container = timelineScrollRef.current;
-      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-      setUserScrolledUp(false);
-    }
-  }, []);
-
   const handleExport = () => {
     if (!session) return;
     const payload = {

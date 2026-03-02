@@ -224,8 +224,10 @@ export function PersonaCatalog() {
                 <div className="flex items-center gap-1">
                   {persona.source === 'local' && (
                     <button
+                      type="button"
                       onClick={() => setEditingPersona(persona)}
                       className="rounded-md p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                      aria-label={`Edit persona ${persona.displayName}`}
                       title="Edit persona"
                     >
                       <Edit3 className="h-3 w-3" />
@@ -238,6 +240,11 @@ export function PersonaCatalog() {
                       setShowDeleteModal(persona.id);
                     }}
                     className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:opacity-30 dark:border-white/10 dark:text-slate-400 dark:hover:text-rose-300"
+                    aria-label={
+                      persona.source === "remote"
+                        ? `Remote persona ${persona.displayName} is server-managed`
+                        : `Remove persona ${persona.displayName}`
+                    }
                     title={persona.source === "remote" ? "Remote personas are server-managed" : "Remove persona"}
                     disabled={persona.id === primaryPersona || persona.source === "remote"}
                   >
@@ -354,4 +361,3 @@ export function PersonaCatalog() {
     </section>
   );
 }
-

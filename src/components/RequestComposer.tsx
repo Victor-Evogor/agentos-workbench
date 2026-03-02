@@ -18,6 +18,7 @@ const createRequestSchema = (t: Translate) =>
   });
 
 export type RequestComposerPayload = z.infer<ReturnType<typeof createRequestSchema>>;
+type ZodResolverSchema = Parameters<typeof zodResolver>[0];
 
 interface RequestComposerProps {
   onSubmit: (payload: RequestComposerPayload) => void;
@@ -51,7 +52,7 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
   const requestSchema = useMemo(() => createRequestSchema(t), [t]);
 
   const form = useForm<RequestComposerPayload>({
-    resolver: zodResolver(requestSchema as any) as any,
+    resolver: zodResolver(requestSchema as unknown as ZodResolverSchema),
     defaultValues: {
       input: examplePrompts[0] || samplePrompt || "Hi"
     }
@@ -71,7 +72,6 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
 
   const processSubmission = (values: RequestComposerPayload) => {
     if (!activeSession) {
-      console.error("No active session selected");
       return;
     }
 
@@ -179,7 +179,7 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
           <button
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold theme-bg-accent theme-text-on-accent shadow-md transition hover:-translate-y-0.5 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isStreaming}
+            disabled={isStreaming || disabled || !activeSession}
           >
             <Play className="h-3.5 w-3.5" />
             {isStreaming ? t("requestComposer.actions.streaming") : t("requestComposer.actions.submit")}

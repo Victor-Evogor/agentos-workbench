@@ -245,6 +245,8 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
                         type="button"
                         onClick={() => removeRole(role.id)}
                         disabled={formDisabled}
+                        aria-label={`Remove agent role ${index + 1}`}
+                        title="Remove role"
                         className="rounded-full border border-slate-200 p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -324,4 +326,3 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
     </div>
   );
 }
-
