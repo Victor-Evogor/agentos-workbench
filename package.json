@@ -21,8 +21,8 @@
     "e2e:smoke": "tsx e2e-test.ts"
   },
   "dependencies": {
-    "@framers/agentos": "workspace:*",
-    "@framers/sql-storage-adapter": "workspace:*",
+    "@framers/agentos": "*",
+    "@framers/sql-storage-adapter": "*",
     "@framers/theme-tokens": "^0.1.0",
     "@hookform/resolvers": "^3.6.0",
     "@tanstack/react-query": "^5.51.0",
