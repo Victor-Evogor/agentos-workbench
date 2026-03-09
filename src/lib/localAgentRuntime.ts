@@ -99,7 +99,7 @@ const buildProviderConfig = (secrets: Record<string, string>): AIModelProviderMa
       config: {
         apiKey: secrets["openai.apiKey"],
         baseURL: "https://api.openai.com/v1",
-        defaultModelId: "gpt-4o-mini"
+        defaultModelId: "gpt-4o"
       }
     });
   }
@@ -308,7 +308,7 @@ class EmbeddedRuntimeHost {
       personaLoaderConfig: { personaSource: "embedded", loaderType: "in_memory" },
       defaultGMIBaseConfigDefaults: {
         defaultLlmProviderId: defaultProviderId,
-        defaultLlmModelId: defaultModelId ?? "gpt-4o-mini"
+        defaultLlmModelId: defaultModelId ?? "gpt-4o"
       }
     };
   }

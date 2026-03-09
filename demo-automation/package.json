@@ -4,16 +4,19 @@
   "private": true,
   "description": "Automated demo recording system for AgentOS Workbench",
   "scripts": {
-    "record": "npx ts-node run.ts",
-    "record:all": "npx ts-node run.ts --all",
-    "record:agent": "npx ts-node run.ts --demo agent-creation",
-    "record:multi": "npx ts-node run.ts --demo multi-agent",
-    "record:rag": "npx ts-node run.ts --demo rag-memory",
-    "record:planning": "npx ts-node run.ts --demo planning-engine",
-    "record:streaming": "npx ts-node run.ts --demo streaming",
-    "record:4k": "npx ts-node run.ts --width 3840 --height 2160",
-    "record:1440p": "npx ts-node run.ts --width 2560 --height 1440",
-    "process": "npx ts-node lib/video-processor.ts",
+    "record": "tsx run.ts",
+    "record:all": "tsx run.ts --all",
+    "record:streaming": "tsx run.ts --demo streaming",
+    "record:agency": "tsx run.ts --demo agency",
+    "record:personas": "tsx run.ts --demo personas",
+    "record:workflows": "tsx run.ts --demo workflows",
+    "record:telemetry": "tsx run.ts --demo telemetry",
+    "record:themes": "tsx run.ts --demo themes",
+    "record:evaluation": "tsx run.ts --demo evaluation",
+    "record:export": "tsx run.ts --demo export-import",
+    "record:4k": "tsx run.ts --width 3840 --height 2160",
+    "record:1440p": "tsx run.ts --width 2560 --height 1440",
+    "process": "tsx lib/video-processor.ts",
     "setup": "playwright install chromium"
   },
   "dependencies": {
@@ -24,7 +27,7 @@
   "devDependencies": {
     "@types/ffmpeg-static": "^5.1.0",
     "@types/node": "^20.0.0",
-    "ts-node": "^10.9.0",
+    "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   }
 }

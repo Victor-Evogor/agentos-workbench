@@ -92,9 +92,9 @@ ${Object.entries(DEMO_SCRIPTS)
 
 Examples:
   npx ts-node run.ts                    # Record all demos
-  npx ts-node run.ts --demo agent-creation
+  npx ts-node run.ts --demo streaming
   npx ts-node run.ts --width 2560 --height 1440
-  npx ts-node run.ts --demo multi-agent --no-process
+  npx ts-node run.ts --demo agency --no-process
 `);
 }
 
@@ -143,7 +143,7 @@ async function main(): Promise<void> {
     const agent = new BrowserAgent(recorder);
 
     try {
-      await agent.initialize();
+      await agent.initialize(demoId);
       const videoPath = await agent.executeScript(script);
       recordedVideos.push(videoPath);
       console.log(`✓ Recorded: ${videoPath}`);
@@ -171,9 +171,9 @@ async function main(): Promise<void> {
 
     await processor.processAll();
 
-    // Copy to landing page
+    // Copy to landing page / wunderland-sh-site
     if (config.copyToLanding) {
-      const landingPageDir = path.join(__dirname, '../../agentos.sh');
+      const landingPageDir = path.join(__dirname, '../../../wunderland-sh-site');
       await processor.copyToLandingPage(landingPageDir);
     }
   }

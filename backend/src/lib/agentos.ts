@@ -48,7 +48,7 @@ async function createAgentOS(): Promise<AgentOSInstance> {
     const module = await runtimeImport('@framers/agentos');
     return new module.AgentOS() as AgentOSInstance;
   } catch {
-    const fallbackEntry = path.resolve(__dirname, '../../../../packages/agentos/dist/index.js');
+    const fallbackEntry = path.resolve(__dirname, '../../../../../packages/agentos/dist/index.js');
     const module = await runtimeImport(pathToFileURL(fallbackEntry).href);
     return new module.AgentOS() as AgentOSInstance;
   }

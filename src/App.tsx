@@ -128,15 +128,15 @@ function TelemetryView() {
   const perSession = useTelemetryStore((s) => s.perSession);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const m = activeSessionId ? perSession[activeSessionId] : undefined;
-  if (!m) return <p className="text-xs theme-text-secondary">No telemetry yet.</p>;
+  if (!m) return <p className="text-[10px] theme-text-secondary">No telemetry yet.</p>;
   return (
-    <dl className="grid grid-cols-2 gap-3 text-xs theme-text-secondary">
-      <div><dt className="uppercase tracking-widest theme-text-muted">Chunks</dt><dd className="font-semibold theme-text-primary">{m.chunks ?? 0}</dd></div>
-      <div><dt className="uppercase tracking-widest theme-text-muted">Chars</dt><dd className="font-semibold theme-text-primary">{m.textDeltaChars ?? 0}</dd></div>
-      <div><dt className="uppercase tracking-widest theme-text-muted">Tool calls</dt><dd className="font-semibold theme-text-primary">{m.toolCalls ?? 0}</dd></div>
-      <div><dt className="uppercase tracking-widest theme-text-muted">Errors</dt><dd className="font-semibold theme-text-primary">{m.errors ?? 0}</dd></div>
-      <div><dt className="uppercase tracking-widest theme-text-muted">Duration</dt><dd className="font-semibold theme-text-primary">{m.durationMs ? `${Math.round(m.durationMs)}ms` : '-'}</dd></div>
-      <div><dt className="uppercase tracking-widest theme-text-muted">Tokens</dt><dd className="font-semibold theme-text-primary">{m.finalTokensTotal ?? '-'}</dd></div>
+    <dl className="grid grid-cols-3 gap-x-3 gap-y-0.5 text-[10px] theme-text-secondary">
+      <div><dt className="theme-text-muted">Chunks</dt><dd className="font-semibold theme-text-primary">{m.chunks ?? 0}</dd></div>
+      <div><dt className="theme-text-muted">Chars</dt><dd className="font-semibold theme-text-primary">{m.textDeltaChars ?? 0}</dd></div>
+      <div><dt className="theme-text-muted">Tools</dt><dd className="font-semibold theme-text-primary">{m.toolCalls ?? 0}</dd></div>
+      <div><dt className="theme-text-muted">Errors</dt><dd className="font-semibold theme-text-primary">{m.errors ?? 0}</dd></div>
+      <div><dt className="theme-text-muted">Duration</dt><dd className="font-semibold theme-text-primary">{m.durationMs ? `${Math.round(m.durationMs)}ms` : '-'}</dd></div>
+      <div><dt className="theme-text-muted">Tokens</dt><dd className="font-semibold theme-text-primary">{m.finalTokensTotal ?? '-'}</dd></div>
     </dl>
   );
 }
@@ -160,7 +160,7 @@ function AnalyticsView({
   const completionTokens = m?.finalTokensCompletion ?? 0;
   
   const currentModelData = modelData.find(model => model.id === selectedModel);
-  const systemDefaultModel = modelData.find(model => model.id === 'gpt-4o-mini') || modelData[0];
+  const systemDefaultModel = modelData.find(model => model.id === 'gpt-4o') || modelData.find(model => model.id === 'gpt-4o-mini') || modelData[0];
   
   const estimateUsd = (promptTokens: number, completionTokens: number, model?: string) => {
     const modelInfo = modelData.find(m => m.id === model);
@@ -174,41 +174,32 @@ function AnalyticsView({
   const cost = estimateUsd(promptTokens, completionTokens, selectedModel);
   
   return (
-    <div className="text-xs theme-text-secondary">
-      <div className="mb-3 space-y-2">
-        <label className="block">
-          <span className="text-[11px] uppercase tracking-widest theme-text-muted">Model Override</span>
-          <select
-            value={selectedModel || ''}
-            onChange={(e) => onChangeModel(e.target.value || undefined)}
-            className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <option value="">
-              System default ({systemDefaultModel?.displayName || systemDefaultModel?.id || 'gpt-4o-mini'})
-            </option>
-            {modelOptions.map((m) => {
-              const modelInfo = modelData.find(model => model.id === m);
-              return (
-                <option key={m} value={m}>
-                  {modelInfo?.displayName || m} {selectedModel === m ? '(current)' : ''}
-                </option>
-              );
-            })}
-          </select>
-        </label>
-        {currentModelData && (
-          <div className="text-[10px] theme-text-muted">
-            Provider: {currentModelData.provider} | 
-            Input: ${(currentModelData.pricing?.inputCostPer1K || 0).toFixed(4)}/1K | 
-            Output: ${(currentModelData.pricing?.outputCostPer1K || 0).toFixed(4)}/1K
-          </div>
-        )}
-      </div>
-      <div className="space-y-1">
-        <p>Last session tokens: {tokens || '-'}</p>
-        <p>Prompt: {promptTokens || '-'} | Completion: {completionTokens || '-'}</p>
-        <p>Estimated cost: {tokens ? `$${cost.toFixed(4)}` : '-'}</p>
-      </div>
+    <div className="text-[10px] theme-text-secondary space-y-1">
+      <label className="block">
+        <select
+          value={selectedModel || ''}
+          onChange={(e) => onChangeModel(e.target.value || undefined)}
+          className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-1.5 py-0.5 text-[10px] theme-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <option value="">
+            Default ({systemDefaultModel?.displayName || systemDefaultModel?.id || 'gpt-4o-mini'})
+          </option>
+          {modelOptions.map((m) => {
+            const modelInfo = modelData.find(model => model.id === m);
+            return (
+              <option key={m} value={m}>
+                {modelInfo?.displayName || m} {selectedModel === m ? '(current)' : ''}
+              </option>
+            );
+          })}
+        </select>
+      </label>
+      {currentModelData && (
+        <div className="theme-text-muted">
+          {currentModelData.provider} | In: ${(currentModelData.pricing?.inputCostPer1K || 0).toFixed(4)}/1K | Out: ${(currentModelData.pricing?.outputCostPer1K || 0).toFixed(4)}/1K
+        </div>
+      )}
+      <div>Tokens: {tokens || '-'} (P:{promptTokens || '-'} C:{completionTokens || '-'}) | Cost: {tokens ? `$${cost.toFixed(4)}` : '-'}</div>
     </div>
   );
 }
@@ -379,312 +370,105 @@ function TaskOutcomeHealthView({
   }, [loadHealth]);
 
   return (
-    <div className="space-y-2 text-xs theme-text-secondary">
-      <div className="flex items-center justify-between">
-        <span>Live alerts</span>
-        <span className="font-semibold theme-text-primary">{liveAlertCount}</span>
+    <div className="space-y-1 text-[10px] theme-text-secondary max-h-36 overflow-y-auto">
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+        <div className="flex justify-between"><span>Alerts</span><span className="font-semibold theme-text-primary">{liveAlertCount}</span></div>
+        <div className="flex justify-between"><span>Unacked</span><span className="font-semibold theme-text-primary">{unacknowledgedPersistedAlerts}</span></div>
+        <div className="flex justify-between"><span>Success</span><span className="font-semibold theme-text-primary">{totals ? `${Math.round(totals.weightedSuccessRate * 100)}%` : "—"}</span></div>
+        <div className="flex justify-between"><span>Samples</span><span className="font-semibold theme-text-primary">{totals?.sampleCount ?? "—"}</span></div>
+        <div className="flex justify-between"><span>Threshold</span><span className="font-semibold theme-text-primary">{thresholdPercent}</span></div>
+        <div className="flex justify-between"><span>Fail mode</span><span className="font-semibold theme-text-primary">{config?.turnPlanning.defaultToolFailureMode ?? "fail_open"}</span></div>
       </div>
-      <div className="flex items-center justify-between">
-        <span>Persisted unacked</span>
-        <span className="font-semibold theme-text-primary">{unacknowledgedPersistedAlerts}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Rolling weighted success</span>
-        <span className="font-semibold theme-text-primary">
-          {totals ? `${Math.round(totals.weightedSuccessRate * 100)}%` : "—"}
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Total samples</span>
-        <span className="font-semibold theme-text-primary">{totals?.sampleCount ?? "—"}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Alert threshold</span>
-        <span className="font-semibold theme-text-primary">{thresholdPercent}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Failure mode</span>
-        <span className="font-semibold theme-text-primary">
-          {config?.turnPlanning.defaultToolFailureMode ?? "fail_open"}
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Discovery selection</span>
-        <span className="font-semibold theme-text-primary">
-          {config?.turnPlanning.discovery?.defaultToolSelectionMode ?? "discovered"}
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Discovery recall</span>
-        <span className="font-semibold theme-text-primary">
-          {config?.turnPlanning.discovery?.recallProfile ?? "aggressive"}
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Adaptive force fail-open</span>
-        <span className="font-semibold theme-text-primary">
-          {config?.adaptiveExecution.forceFailOpenWhenDegraded !== false ? "on" : "off"}
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>Tenant mode</span>
-        <span className="font-semibold theme-text-primary">{config?.tenantRouting.mode ?? "—"}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-2 pt-1">
-        <label className="space-y-1">
-          <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Scope</span>
-          <select
-            value={scopeMode}
-            onChange={(event) => {
-              setScopeMode(event.target.value as typeof scopeMode);
-              setPage(1);
-            }}
-            className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-          >
-            <option value="all">All</option>
-            <option value="global">Global</option>
-            <option value="organization">Organization</option>
-            <option value="organization_persona">Org + Persona</option>
-          </select>
-        </label>
-        <label className="space-y-1">
-          <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Sort</span>
-          <select
-            value={sortBy}
-            onChange={(event) => {
-              setSortBy(event.target.value as typeof sortBy);
-              setPage(1);
-            }}
-            className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-          >
-            <option value="updated_at">Updated</option>
-            <option value="weighted_success_rate">Weighted Success</option>
-            <option value="sample_count">Sample Count</option>
-            <option value="scope_key">Scope Key</option>
-          </select>
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="space-y-1">
-          <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Search scope</span>
-          <input
-            value={scopeContains}
-            onChange={(event) => {
-              setScopeContains(event.target.value);
-              setPage(1);
-            }}
-            placeholder="org:acme"
-            className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1">
-            <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Dir</span>
-            <select
-              value={sortDir}
-              onChange={(event) => {
-                setSortDir(event.target.value as "asc" | "desc");
-                setPage(1);
-              }}
-              className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-            >
-              <option value="desc">Desc</option>
-              <option value="asc">Asc</option>
+      <details className="text-[10px]">
+        <summary className="cursor-pointer select-none theme-text-muted hover:theme-text-secondary">Filters &amp; config</summary>
+        <div className="mt-1 space-y-1">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+            <div className="flex justify-between"><span>Discovery</span><span className="font-semibold theme-text-primary">{config?.turnPlanning.discovery?.defaultToolSelectionMode ?? "discovered"}</span></div>
+            <div className="flex justify-between"><span>Recall</span><span className="font-semibold theme-text-primary">{config?.turnPlanning.discovery?.recallProfile ?? "aggressive"}</span></div>
+            <div className="flex justify-between"><span>Force fail-open</span><span className="font-semibold theme-text-primary">{config?.adaptiveExecution.forceFailOpenWhenDegraded !== false ? "on" : "off"}</span></div>
+            <div className="flex justify-between"><span>Tenant</span><span className="font-semibold theme-text-primary">{config?.tenantRouting.mode ?? "—"}</span></div>
+          </div>
+          <div className="grid grid-cols-4 gap-1 pt-0.5">
+            <select value={scopeMode} onChange={(event) => { setScopeMode(event.target.value as typeof scopeMode); setPage(1); }} className="rounded border theme-border bg-[color:var(--color-background-secondary)] px-1 py-0.5 text-[10px] theme-text-primary" title="Scope">
+              <option value="all">All</option><option value="global">Global</option><option value="organization">Org</option><option value="organization_persona">Org+P</option>
             </select>
-          </label>
-          <label className="space-y-1">
-            <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Page size</span>
-            <select
-              value={limit}
-              onChange={(event) => {
-                setLimit(Number(event.target.value) || 6);
-                setPage(1);
-              }}
-              className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-            >
-              <option value={4}>4</option>
-              <option value={6}>6</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
+            <select value={sortBy} onChange={(event) => { setSortBy(event.target.value as typeof sortBy); setPage(1); }} className="rounded border theme-border bg-[color:var(--color-background-secondary)] px-1 py-0.5 text-[10px] theme-text-primary" title="Sort by">
+              <option value="updated_at">Updated</option><option value="weighted_success_rate">Success</option><option value="sample_count">Samples</option><option value="scope_key">Scope</option>
             </select>
-          </label>
+            <select value={sortDir} onChange={(event) => { setSortDir(event.target.value as "asc" | "desc"); setPage(1); }} className="rounded border theme-border bg-[color:var(--color-background-secondary)] px-1 py-0.5 text-[10px] theme-text-primary" title="Direction">
+              <option value="desc">Desc</option><option value="asc">Asc</option>
+            </select>
+            <input value={scopeContains} onChange={(event) => { setScopeContains(event.target.value); setPage(1); }} placeholder="scope" className="rounded border theme-border bg-[color:var(--color-background-secondary)] px-1 py-0.5 text-[10px] theme-text-primary" title="Filter scope" />
+          </div>
         </div>
-      </div>
-      {windows.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest theme-text-muted">Scope windows (page)</p>
-          {windows.map((window) => (
-            <div
-              key={window.scopeKey}
-              className="flex items-center justify-between rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1"
-            >
-              <span className="truncate pr-2">{window.scopeKey}</span>
-              <span className="font-semibold theme-text-primary">
-                {Math.round(window.weightedSuccessRate * 100)}% / {window.sampleCount}
-              </span>
-            </div>
-          ))}
-        </div>
+      </details>
+      {(windows.length > 0 || activePersonaId || degradedWindows.length > 0) && (
+        <details className="text-[10px]">
+          <summary className="cursor-pointer select-none theme-text-muted hover:theme-text-secondary">Scopes &amp; windows</summary>
+          <div className="mt-1 space-y-0.5">
+            {activePersonaId && (
+              <div className="flex justify-between"><span>Active persona</span><span className="font-semibold theme-text-primary">{activePersonaWindow ? `${Math.round(activePersonaWindow.weightedSuccessRate * 100)}% (${activePersonaWindow.sampleCount})` : "—"}</span></div>
+            )}
+            {windows.map((window) => (
+              <div key={window.scopeKey} className="flex justify-between"><span className="truncate pr-1">{window.scopeKey}</span><span className="font-semibold theme-text-primary">{Math.round(window.weightedSuccessRate * 100)}%/{window.sampleCount}</span></div>
+            ))}
+            {degradedWindows.length > 0 && (
+              <>
+                <p className="theme-text-muted pt-0.5">Degraded:</p>
+                {degradedWindows.map((window) => (
+                  <div key={window.scopeKey} className="flex justify-between"><span className="truncate pr-1">{window.scopeKey}</span><span className="font-semibold theme-text-primary">{Math.round(window.weightedSuccessRate * 100)}%</span></div>
+                ))}
+              </>
+            )}
+          </div>
+        </details>
       )}
-      {activePersonaId && (
-        <div className="rounded-md border theme-border bg-[color:var(--color-background-secondary)] p-2">
-          <p className="text-[10px] uppercase tracking-widest theme-text-muted">Active persona scope</p>
-          <p className="mt-1 font-semibold theme-text-primary">
-            {activePersonaWindow
-              ? `${Math.round(activePersonaWindow.weightedSuccessRate * 100)}% (${activePersonaWindow.sampleCount} samples)`
-              : "No scoped KPI window yet"}
-          </p>
-        </div>
-      )}
-      {degradedWindows.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest theme-text-muted">Most degraded scopes</p>
-          {degradedWindows.map((window) => (
-            <div key={window.scopeKey} className="flex items-center justify-between rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1">
-              <span className="truncate pr-2">{window.scopeKey}</span>
-              <span className="font-semibold theme-text-primary">
-                {Math.round(window.weightedSuccessRate * 100)}%
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="rounded-md border theme-border bg-[color:var(--color-background-secondary)] p-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] uppercase tracking-widest theme-text-muted">Alert retention</p>
-          <button
-            type="button"
-            onClick={() => {
-              void handlePruneAlerts();
-            }}
-            className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-[10px] uppercase tracking-widest theme-text-secondary disabled:opacity-40"
-            disabled={pruningAlerts || retentionStatus?.pruneInFlight}
-          >
-            {pruningAlerts || retentionStatus?.pruneInFlight ? "Pruning..." : "Prune now"}
-          </button>
-        </div>
-        <p className="mt-1">
-          {retentionStatus
-            ? `${retentionStatus.config.enabled ? "Enabled" : "Disabled"} • ${retentionStatus.config.retentionDays}d • max ${retentionStatus.config.maxRows.toLocaleString()} rows`
-            : "Loading retention policy..."}
-        </p>
-        {lastPruneSummary && (
-          <p className="mt-1 text-[10px] theme-text-muted">
-            Last prune {new Date(lastPruneSummary.prunedAt).toLocaleString()} • deleted {lastPruneSummary.totalDeleted} • remaining {lastPruneSummary.remainingRows.toLocaleString()}
-          </p>
-        )}
-      </div>
-      <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-widest theme-text-muted">Persisted alerts</p>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1">
-            <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Severity</span>
-            <select
-              value={alertSeverityFilter}
-              onChange={(event) => {
-                setAlertSeverityFilter(event.target.value as typeof alertSeverityFilter);
-              }}
-              className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-            >
-              <option value="all">All</option>
-              <option value="critical">Critical</option>
-              <option value="warning">Warning</option>
+      <details className="text-[10px]">
+        <summary className="cursor-pointer select-none theme-text-muted hover:theme-text-secondary">
+          Alerts ({persistedAlerts.length}) &amp; retention
+          {retentionStatus && <span className="ml-1">• {retentionStatus.config.retentionDays}d</span>}
+        </summary>
+        <div className="mt-1 space-y-1">
+          <div className="flex items-center gap-1">
+            <select value={alertSeverityFilter} onChange={(event) => setAlertSeverityFilter(event.target.value as typeof alertSeverityFilter)} className="rounded border theme-border bg-[color:var(--color-background-secondary)] px-1 py-0.5 text-[10px] theme-text-primary" title="Severity">
+              <option value="all">All sev</option><option value="critical">Critical</option><option value="warning">Warning</option>
             </select>
-          </label>
-          <label className="space-y-1">
-            <span className="block text-[10px] uppercase tracking-widest theme-text-muted">Ack state</span>
-            <select
-              value={alertAckFilter}
-              onChange={(event) => {
-                setAlertAckFilter(event.target.value as typeof alertAckFilter);
-              }}
-              className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary"
-            >
-              <option value="all">All</option>
-              <option value="unacknowledged">Unacknowledged</option>
-              <option value="acknowledged">Acknowledged</option>
+            <select value={alertAckFilter} onChange={(event) => setAlertAckFilter(event.target.value as typeof alertAckFilter)} className="rounded border theme-border bg-[color:var(--color-background-secondary)] px-1 py-0.5 text-[10px] theme-text-primary" title="Ack state">
+              <option value="all">All ack</option><option value="unacknowledged">Unacked</option><option value="acknowledged">Acked</option>
             </select>
-          </label>
-        </div>
-        {persistedAlerts.length === 0 ? (
-          <p className="rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-2">
-            No persisted alerts for current filters.
-          </p>
-        ) : (
-          persistedAlerts.map((alert) => {
-            const acknowledged = Boolean(alert.acknowledgedAt);
-            const severity = alert.severity.toLowerCase();
-            const severityClass =
-              severity === "critical" ? "text-rose-600 dark:text-rose-300" : "theme-text-secondary";
-            const timestampLabel = new Date(alert.alertTimestamp).toLocaleString();
-            return (
-              <div
-                key={alert.alertId}
-                className="rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold theme-text-primary">{alert.scopeKey}</p>
-                    <p className={`text-[10px] uppercase tracking-widest ${severityClass}`}>{alert.severity}</p>
+            <button type="button" onClick={() => { void handlePruneAlerts(); }} className="rounded border theme-border px-1 py-0.5 text-[10px] theme-text-secondary disabled:opacity-40" disabled={pruningAlerts || retentionStatus?.pruneInFlight}>
+              {pruningAlerts ? "..." : "Prune"}
+            </button>
+          </div>
+          {persistedAlerts.length === 0 ? (
+            <p className="theme-text-muted">No alerts.</p>
+          ) : (
+            persistedAlerts.map((alert) => {
+              const acknowledged = Boolean(alert.acknowledgedAt);
+              const severity = alert.severity.toLowerCase();
+              return (
+                <div key={alert.alertId} className="flex items-center justify-between gap-1 rounded border theme-border px-1 py-0.5">
+                  <div className="min-w-0 flex-1">
+                    <span className="truncate font-semibold theme-text-primary">{alert.scopeKey}</span>
+                    <span className={`ml-1 ${severity === "critical" ? "text-rose-500" : ""}`}>{alert.severity}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleAcknowledgeToggle(alert.alertId, !acknowledged);
-                    }}
-                    className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-[10px] uppercase tracking-widest theme-text-secondary disabled:opacity-40"
-                    disabled={acknowledgingAlertId === alert.alertId}
-                  >
+                  <button type="button" onClick={() => { void handleAcknowledgeToggle(alert.alertId, !acknowledged); }} className="rounded border theme-border px-1 py-0 text-[9px] theme-text-secondary disabled:opacity-40" disabled={acknowledgingAlertId === alert.alertId}>
                     {acknowledged ? "Unack" : "Ack"}
                   </button>
                 </div>
-                <p className="mt-1 line-clamp-2">{alert.reason}</p>
-                <p className="mt-1 text-[10px] theme-text-muted">
-                  {toAlertPercent(alert.value)} vs {toAlertPercent(alert.threshold)} • {alert.sampleCount} samples • {timestampLabel}
-                </p>
-                {acknowledged && (
-                  <p className="mt-1 text-[10px] theme-text-muted">
-                    Acknowledged {alert.acknowledgedAt ? new Date(alert.acknowledgedAt).toLocaleString() : ""}
-                  </p>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-      {error && <p className="text-rose-500">{error}</p>}
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={!pagination?.hasPreviousPage}
-            className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-[10px] uppercase tracking-widest theme-text-secondary disabled:opacity-40"
-          >
-            Prev
-          </button>
-          <span className="text-[10px] theme-text-muted">
-            {pagination ? `Page ${pagination.page}/${pagination.totalPages}` : "Page —"}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((prev) => prev + 1)}
-            disabled={!pagination?.hasNextPage}
-            className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-[10px] uppercase tracking-widest theme-text-secondary disabled:opacity-40"
-          >
-            Next
-          </button>
+              );
+            })
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            void loadHealth();
-          }}
-          className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-[10px] uppercase tracking-widest theme-text-secondary hover:opacity-90"
-          disabled={loading}
-        >
-          {loading ? "Refreshing..." : "Refresh"}
-        </button>
+      </details>
+      {error && <p className="text-rose-500">{error}</p>}
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-0.5">
+          <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={!pagination?.hasPreviousPage} className="rounded border theme-border px-1 py-0 text-[9px] theme-text-secondary disabled:opacity-40">‹</button>
+          <span className="text-[9px] theme-text-muted">{pagination ? `${pagination.page}/${pagination.totalPages}` : "—"}</span>
+          <button type="button" onClick={() => setPage((prev) => prev + 1)} disabled={!pagination?.hasNextPage} className="rounded border theme-border px-1 py-0 text-[9px] theme-text-secondary disabled:opacity-40">›</button>
+        </div>
+        <button type="button" onClick={() => { void loadHealth(); }} className="rounded border theme-border px-1 py-0 text-[9px] theme-text-secondary hover:opacity-90" disabled={loading}>{loading ? "..." : "Refresh"}</button>
       </div>
     </div>
   );
@@ -1697,36 +1481,38 @@ export default function App() {
 
             {/* Right Column: Outputs - Stack on mobile, side-by-side on desktop */}
             <aside
-              className="flex flex-col gap-3 min-h-[500px] md:min-h-0 md:h-full overflow-hidden"
+              className="flex flex-col gap-2 min-h-[500px] md:min-h-0 md:h-full overflow-hidden"
               aria-label={t("app.labels.outputsPanel", { defaultValue: "Outputs and results" })}
             >
               <div className="flex-1 min-h-0 relative">
                 <SessionInspector />
               </div>
-              <div className="border-t border-slate-200 dark:border-white/10 md:hidden" />
-              <div className="flex-none grid gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
-                <section className="card-panel--strong p-3 sm:p-4 transition-theme">
-                  <header className="mb-2">
-                    <p className="text-[10px] uppercase tracking-[0.3em] theme-text-muted">Stream status</p>
-                    <h3 className="text-xs font-semibold theme-text-primary">Live telemetry</h3>
-                  </header>
-                  <TelemetryView />
-                </section>
-                <section className="card-panel--strong p-3 sm:p-4 transition-theme">
-                  <header className="mb-2">
-                    <p className="text-[10px] uppercase tracking-[0.3em] theme-text-muted">Analytics</p>
-                    <h3 className="text-xs font-semibold theme-text-primary">Usage insights</h3>
-                  </header>
-                  <AnalyticsView selectedModel={selectedModel} onChangeModel={setSelectedModel} modelOptions={modelOptions} modelData={modelData} />
-                </section>
-                <section className="card-panel--strong p-3 sm:p-4 transition-theme">
-                  <header className="mb-2">
-                    <p className="text-[10px] uppercase tracking-[0.3em] theme-text-muted">Task success</p>
-                    <h3 className="text-xs font-semibold theme-text-primary">Health</h3>
-                  </header>
-                  <TaskOutcomeHealthView liveAlertCount={liveAlertCount} scopeJump={healthScopeJump} />
-                </section>
-              </div>
+              <details className="flex-none group" open={false}>
+                <summary className="cursor-pointer select-none flex items-center gap-2 border-t border-slate-200 dark:border-white/10 px-2 py-1.5 text-[10px] uppercase tracking-[0.3em] theme-text-muted hover:theme-text-secondary transition-colors">
+                  <span className="inline-block transition-transform group-open:rotate-90">&#9654;</span>
+                  Telemetry &amp; Health
+                </summary>
+                <div className="max-h-48 overflow-y-auto grid gap-2 sm:grid-cols-2 lg:grid-cols-3 p-2">
+                  <section className="card-panel--strong p-2 transition-theme">
+                    <header className="mb-1">
+                      <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em] theme-text-muted">Telemetry</h3>
+                    </header>
+                    <TelemetryView />
+                  </section>
+                  <section className="card-panel--strong p-2 transition-theme">
+                    <header className="mb-1">
+                      <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em] theme-text-muted">Analytics</h3>
+                    </header>
+                    <AnalyticsView selectedModel={selectedModel} onChangeModel={setSelectedModel} modelOptions={modelOptions} modelData={modelData} />
+                  </section>
+                  <section className="card-panel--strong p-2 transition-theme">
+                    <header className="mb-1">
+                      <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em] theme-text-muted">Health</h3>
+                    </header>
+                    <TaskOutcomeHealthView liveAlertCount={liveAlertCount} scopeJump={healthScopeJump} />
+                  </section>
+                </div>
+              </details>
             </aside>
           </div>
         </main>

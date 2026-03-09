@@ -206,7 +206,8 @@ export class VideoProcessor {
     const candidates = [
       ffmpegStatic as string,
       path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'),
-      'ffmpeg',
+      '/opt/homebrew/bin/ffmpeg',
+      '/usr/local/bin/ffmpeg',
     ].filter(Boolean) as string[];
 
     for (const bin of candidates) {
@@ -215,7 +216,14 @@ export class VideoProcessor {
       }
     }
 
-    throw new Error('FFmpeg binary not found. Please ensure ffmpeg-static is installed.');
+    // Fallback: try system PATH
+    try {
+      const { execSync } = require('child_process');
+      const systemFfmpeg = execSync('which ffmpeg', { encoding: 'utf-8' }).trim();
+      if (systemFfmpeg && fs.existsSync(systemFfmpeg)) return systemFfmpeg;
+    } catch {}
+
+    throw new Error('FFmpeg binary not found. Install via: brew install ffmpeg');
   }
 }
 

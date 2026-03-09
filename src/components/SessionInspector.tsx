@@ -98,175 +98,55 @@ function renderMetadataUpdate(chunk: AgentOSMetadataUpdateChunk) {
           : "bg-slate-500/20 text-slate-700 dark:text-slate-200";
 
   return (
-    <div className="space-y-3 text-sm leading-relaxed">
-      {(taskOutcome || taskOutcomeKpi || taskOutcomeAlert) && (
-        <p className="text-xs uppercase tracking-[0.35em] text-cyan-700 dark:text-cyan-200">
-          Task Outcome Telemetry
-        </p>
-      )}
-
-      {taskOutcome && (
-        <div className="rounded-lg border border-cyan-200 bg-white/70 px-3 py-2 dark:border-white/10 dark:bg-slate-950/50">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-              Turn Outcome
-            </span>
-            <span className={clsx("rounded-full px-2 py-0.5 text-[10px] uppercase", statusClass)}>
-              {outcomeStatus}
-            </span>
+    <details className="text-xs leading-relaxed" open={Boolean(taskOutcomeAlert)}>
+      <summary className="cursor-pointer select-none text-[10px] uppercase tracking-[0.3em] text-cyan-700 dark:text-cyan-200">
+        Metadata{taskOutcome ? ` • ${outcomeStatus}` : ''}{taskOutcomeKpi ? ` • ${toPercent(taskOutcomeKpi.weightedSuccessRate)}` : ''}{taskOutcomeAlert ? ' • ALERT' : ''}
+      </summary>
+      <div className="mt-1 space-y-1.5 max-h-40 overflow-y-auto">
+        {taskOutcome && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className={clsx("rounded-full px-1.5 py-0 text-[9px] uppercase", statusClass)}>{outcomeStatus}</span>
+            <span>Score: {toScore(taskOutcome.score)}</span>
+            <span className="text-slate-500 dark:text-slate-400">{typeof taskOutcome.source === "string" ? taskOutcome.source : "heuristic"}</span>
+            {typeof taskOutcome.reason === "string" && taskOutcome.reason.trim().length > 0 && (
+              <span className="truncate text-slate-600 dark:text-slate-300">{taskOutcome.reason}</span>
+            )}
           </div>
-          <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700 dark:text-slate-200">
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Score</dt>
-              <dd>{toScore(taskOutcome.score)}</dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Source</dt>
-              <dd>{typeof taskOutcome.source === "string" ? taskOutcome.source : "heuristic"}</dd>
-            </div>
-          </dl>
-          {typeof taskOutcome.reason === "string" && taskOutcome.reason.trim().length > 0 && (
-            <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{taskOutcome.reason}</p>
-          )}
-        </div>
-      )}
-
-      {taskOutcomeKpi && (
-        <div className="rounded-lg border border-cyan-200 bg-white/70 px-3 py-2 dark:border-white/10 dark:bg-slate-950/50">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-            Rolling KPI
-          </p>
-          <dl className="mt-2 grid gap-2 text-xs text-slate-700 dark:text-slate-200 sm:grid-cols-2">
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Weighted Success
-              </dt>
-              <dd>{toPercent(taskOutcomeKpi.weightedSuccessRate)}</dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Success Rate
-              </dt>
-              <dd>{toPercent(taskOutcomeKpi.successRate)}</dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Sample Count
-              </dt>
-              <dd>{toCount(taskOutcomeKpi.sampleCount)}</dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Scope
-              </dt>
-              <dd>{typeof taskOutcomeKpi.scopeKey === "string" ? taskOutcomeKpi.scopeKey : "—"}</dd>
-            </div>
-          </dl>
-        </div>
-      )}
-
-      {taskOutcomeAlert && (
-        <div className="rounded-lg border border-rose-300/70 bg-rose-50/80 px-3 py-2 text-rose-900 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-100">
-          <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-[0.25em]">
-            <span>KPI Alert</span>
-            <span>
-              {typeof taskOutcomeAlert.severity === "string"
-                ? taskOutcomeAlert.severity
-                : "warning"}
-            </span>
+        )}
+        {taskOutcomeKpi && (
+          <div className="flex flex-wrap gap-x-3 gap-y-0 text-xs text-slate-700 dark:text-slate-200">
+            <span>Weighted: {toPercent(taskOutcomeKpi.weightedSuccessRate)}</span>
+            <span>Rate: {toPercent(taskOutcomeKpi.successRate)}</span>
+            <span>Samples: {toCount(taskOutcomeKpi.sampleCount)}</span>
+            <span className="text-slate-500 dark:text-slate-400">{typeof taskOutcomeKpi.scopeKey === "string" ? taskOutcomeKpi.scopeKey : ""}</span>
           </div>
-          <p className="text-xs">
-            {typeof taskOutcomeAlert.reason === "string"
-              ? taskOutcomeAlert.reason
-              : "Task outcome KPI dropped below threshold."}
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-            <div>
-              <span className="block uppercase tracking-[0.25em] opacity-70">Value</span>
-              <span>{toPercent(taskOutcomeAlert.value)}</span>
-            </div>
-            <div>
-              <span className="block uppercase tracking-[0.25em] opacity-70">Threshold</span>
-              <span>{toPercent(taskOutcomeAlert.threshold)}</span>
-            </div>
-            <div>
-              <span className="block uppercase tracking-[0.25em] opacity-70">Samples</span>
-              <span>{toCount(taskOutcomeAlert.sampleCount)}</span>
-            </div>
+        )}
+        {taskOutcomeAlert && (
+          <div className="rounded border border-rose-300/70 bg-rose-50/80 px-2 py-1 text-xs text-rose-900 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-100">
+            <span className="font-semibold">{typeof taskOutcomeAlert.severity === "string" ? taskOutcomeAlert.severity : "warning"}</span>
+            {' '}{typeof taskOutcomeAlert.reason === "string" ? taskOutcomeAlert.reason : "KPI below threshold."}
+            <span className="ml-2 text-[10px] opacity-70">{toPercent(taskOutcomeAlert.value)} vs {toPercent(taskOutcomeAlert.threshold)} ({toCount(taskOutcomeAlert.sampleCount)})</span>
           </div>
-        </div>
-      )}
-
-      {turnPlanning && (
-        <div className="rounded-lg border border-sky-300/60 bg-sky-50/70 px-3 py-2 dark:border-sky-400/40 dark:bg-sky-500/10">
-          <p className="text-xs uppercase tracking-[0.3em] text-sky-700 dark:text-sky-200">
-            Turn Planning (Stream Payload)
-          </p>
-          <dl className="mt-2 grid gap-2 text-xs text-slate-700 dark:text-slate-200 sm:grid-cols-2">
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Tool Failure Mode
-              </dt>
-              <dd>
-                {typeof planningPolicy?.toolFailureMode === "string"
-                  ? planningPolicy.toolFailureMode
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Tool Selection Mode
-              </dt>
-              <dd>
-                {typeof planningPolicy?.toolSelectionMode === "string"
-                  ? planningPolicy.toolSelectionMode
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Discovery Recall
-              </dt>
-              <dd>
-                {typeof planningPolicy?.recallProfile === "string"
-                  ? planningPolicy.recallProfile
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Adaptive Applied
-              </dt>
-              <dd>{adaptiveExecution?.applied === true ? "yes" : "no"}</dd>
-            </div>
-            <div>
-              <dt className="uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                Forced Fail Open
-              </dt>
-              <dd>{adaptiveActions?.forcedToolFailureMode === true ? "yes" : "no"}</dd>
-            </div>
-          </dl>
-          {typeof adaptiveExecution?.reason === "string" && adaptiveExecution.reason.trim().length > 0 && (
-            <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{adaptiveExecution.reason}</p>
-          )}
-        </div>
-      )}
-
-      {hasExtraUpdates && (
-        <details className="rounded-lg border border-cyan-200 bg-white/60 p-2 text-xs dark:border-white/10 dark:bg-slate-950/40">
-          <summary className="cursor-pointer select-none text-slate-600 dark:text-slate-300">
-            Additional metadata
-          </summary>
-          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words">
-            {JSON.stringify(extraUpdates, null, 2)}
-          </pre>
-        </details>
-      )}
-
-      {!taskOutcome && !taskOutcomeKpi && !taskOutcomeAlert && !turnPlanning && !hasExtraUpdates && (
-        <p className="text-xs text-slate-600 dark:text-slate-300">Metadata update received.</p>
-      )}
-    </div>
+        )}
+        {turnPlanning && (
+          <div className="flex flex-wrap gap-x-3 gap-y-0 text-xs text-slate-700 dark:text-slate-200">
+            <span>Fail: {typeof planningPolicy?.toolFailureMode === "string" ? planningPolicy.toolFailureMode : "—"}</span>
+            <span>Select: {typeof planningPolicy?.toolSelectionMode === "string" ? planningPolicy.toolSelectionMode : "—"}</span>
+            <span>Recall: {typeof planningPolicy?.recallProfile === "string" ? planningPolicy.recallProfile : "—"}</span>
+            <span>Adaptive: {adaptiveExecution?.applied === true ? "yes" : "no"}</span>
+          </div>
+        )}
+        {hasExtraUpdates && (
+          <details className="text-[10px]">
+            <summary className="cursor-pointer select-none text-slate-600 dark:text-slate-300">Extra metadata</summary>
+            <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(extraUpdates, null, 2)}</pre>
+          </details>
+        )}
+        {!taskOutcome && !taskOutcomeKpi && !taskOutcomeAlert && !turnPlanning && !hasExtraUpdates && (
+          <p className="text-slate-600 dark:text-slate-300">Metadata update received.</p>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -279,43 +159,20 @@ function renderWorkflowUpdate(chunk: AgentOSWorkflowUpdateChunk) {
   const goal = typeof goalMetadata === "string" ? goalMetadata : undefined;
 
   return (
-    <div className="space-y-3 text-sm leading-relaxed">
+    <div className="space-y-1 text-xs">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Workflow</p>
-          <p className="text-slate-900 dark:text-slate-100">{chunk.workflow.definitionId}</p>
-        </div>
-        <span className="text-xs text-slate-600 dark:text-slate-300">{formatStatus(chunk.workflow.status)}</span>
+        <span className="font-semibold text-slate-900 dark:text-slate-100">{chunk.workflow.definitionId}</span>
+        <span className="text-[10px] text-slate-500 dark:text-slate-300">{formatStatus(chunk.workflow.status)}</span>
       </div>
-      <dl className="grid gap-2 text-xs text-slate-600 dark:text-slate-300 sm:grid-cols-2">
-        <div>
-          <dt className="uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Workflow Id</dt>
-          <dd className="truncate text-slate-900 dark:text-slate-100">{chunk.workflow.workflowId}</dd>
-        </div>
-        {goal && (
-          <div>
-            <dt className="uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Goal</dt>
-            <dd className="truncate text-slate-900 dark:text-slate-100">{goal}</dd>
-          </div>
-        )}
-      </dl>
+      {goal && <p className="text-slate-600 dark:text-slate-300 truncate">{goal}</p>}
       {tasks.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Tasks</p>
-          <ul className="space-y-2">
-            {tasks.map(([taskId, taskSnapshot]) => (
-              <li
-                key={taskId}
-                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-200"
-              >
-                <div className="flex items-center gap-2">
-                  <GitBranch className="h-3 w-3 text-slate-500 dark:text-slate-400" />
-                  <span>{taskId}</span>
-                </div>
-                <span className="text-slate-500 dark:text-slate-300">{formatStatus(taskSnapshot.status)}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="flex flex-wrap gap-1">
+          {tasks.map(([taskId, taskSnapshot]) => (
+            <span key={taskId} className="inline-flex items-center gap-1 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] dark:border-white/10">
+              <GitBranch className="h-2.5 w-2.5 text-slate-400" />
+              {taskId}: {formatStatus(taskSnapshot.status)}
+            </span>
+          ))}
         </div>
       )}
     </div>
@@ -329,37 +186,22 @@ function renderAgencyUpdate(chunk: AgentOSAgencyUpdateChunk) {
       ? chunk.agency.metadata.goal
       : null;
   return (
-    <div className="space-y-3 text-sm leading-relaxed">
-      <div className="flex items-center gap-2 font-semibold text-sky-900 dark:text-slate-100">
-        <Users className="h-4 w-4 text-sky-600 dark:text-sky-200" />
-        Agency {chunk.agency.agencyId}
+    <div className="space-y-1 text-xs">
+      <div className="flex items-center gap-1.5">
+        <Users className="h-3 w-3 text-sky-500" />
+        <span className="font-semibold text-slate-900 dark:text-slate-100">Agency {chunk.agency.agencyId}</span>
+        <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{chunk.agency.workflowId}</span>
       </div>
-      {goal && <p className="text-slate-700 dark:text-slate-200">{goal}</p>}
-      <dl className="grid gap-2 text-xs text-slate-600 dark:text-slate-200 sm:grid-cols-2">
-        <div>
-          <dt className="uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Workflow</dt>
-          <dd className="truncate text-slate-900 dark:text-slate-100">{chunk.agency.workflowId}</dd>
+      {goal && <p className="text-slate-600 dark:text-slate-300 truncate">{goal}</p>}
+      {seats.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {seats.map((seat) => (
+            <span key={seat.roleId} className="inline-flex items-center gap-1 rounded border border-sky-200 px-1.5 py-0.5 text-[10px] dark:border-white/10">
+              <span className="font-semibold">{seat.roleId}</span>: {seat.personaId}
+            </span>
+          ))}
         </div>
-        {chunk.agency.conversationId && (
-          <div>
-            <dt className="uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Conversation</dt>
-            <dd className="truncate text-slate-900 dark:text-slate-100">{chunk.agency.conversationId}</dd>
-          </div>
-        )}
-      </dl>
-      <div className="space-y-2">
-        {seats.length === 0 ? (
-          <p className="text-xs text-slate-500 dark:text-slate-300">No registered seats yet.</p>
-        ) : (
-          seats.map((seat) => (
-            <div key={seat.roleId} className="rounded-lg border border-sky-200 bg-sky-50/50 p-3 dark:border-white/10 dark:bg-slate-950/40">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-sky-700 dark:text-slate-300">{seat.roleId}</p>
-              <p className="text-sm text-slate-900 dark:text-slate-100">{seat.personaId}</p>
-              <p className="text-xs text-slate-600 dark:text-slate-400">GMI: {seat.gmiInstanceId}</p>
-            </div>
-          ))
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -699,16 +541,19 @@ function buildAggregatedRows(events: Array<{ id: string; timestamp: number; type
       continue;
     }
 
-    // For TOOL_* and ERROR, keep brief lines under the assistant's debug section if present
+    // For TOOL_*, ERROR, and METADATA_UPDATE, keep brief lines under the assistant's debug section
     if (
       typeNorm === AgentOSChunkType.TOOL_CALL_REQUEST ||
       typeNorm === AgentOSChunkType.TOOL_RESULT_EMISSION ||
-      typeNorm === AgentOSChunkType.ERROR
+      typeNorm === AgentOSChunkType.ERROR ||
+      typeNorm === AgentOSChunkType.METADATA_UPDATE
     ) {
       const chunk = e.payload as AgentOSResponse;
       const streamId = (chunk as { streamId?: string }).streamId;
-      if (streamId && byStream[streamId]) {
-        const row = byStream[streamId];
+      // Try to attach to matching stream row, or fall back to most recent stream row
+      const targetStreamId = (streamId && byStream[streamId]) ? streamId : Object.keys(byStream).pop();
+      if (targetStreamId && byStream[targetStreamId]) {
+        const row = byStream[targetStreamId];
         const stamp = new Date(e.timestamp).toLocaleTimeString();
         if (typeNorm === AgentOSChunkType.TOOL_CALL_REQUEST) {
           const tcr = chunk as AgentOSToolCallRequestChunk;
@@ -719,6 +564,20 @@ function buildAggregatedRows(events: Array<{ id: string; timestamp: number; type
         } else if (typeNorm === AgentOSChunkType.ERROR) {
           const err = chunk as { message?: string };
           row.logLines.push(`[${stamp}] error: ${err.message || 'Unknown error'}`);
+        } else if (typeNorm === AgentOSChunkType.METADATA_UPDATE) {
+          const meta = chunk as AgentOSMetadataUpdateChunk;
+          const updates = asObject(meta.updates) ?? {};
+          const taskOutcome = asObject(updates.taskOutcome);
+          const taskOutcomeKpi = asObject(updates.taskOutcomeKpi);
+          const taskOutcomeAlert = asObject(updates.taskOutcomeAlert);
+          const parts: string[] = [];
+          if (taskOutcome) {
+            const status = typeof taskOutcome.status === 'string' ? taskOutcome.status : '?';
+            parts.push(`outcome:${status}`);
+          }
+          if (taskOutcomeKpi) parts.push(`kpi:${toPercent(taskOutcomeKpi.weightedSuccessRate)}`);
+          if (taskOutcomeAlert) parts.push('ALERT');
+          row.logLines.push(`[${stamp}] metadata: ${parts.length > 0 ? parts.join(' ') : 'update'}`);
         }
         continue;
       }
@@ -747,9 +606,9 @@ function buildAggregatedRows(events: Array<{ id: string; timestamp: number; type
       }
     }
 
-    // Fallback: push as a simple row (skip SYSTEM_PROGRESS as it's aggregated into debug logs)
+    // Fallback: push as a simple row (skip types aggregated into debug logs)
     // Note: TEXT_DELTA and FINAL_RESPONSE are already handled above and won't reach here
-    if (typeNorm !== AgentOSChunkType.SYSTEM_PROGRESS) {
+    if (typeNorm !== AgentOSChunkType.SYSTEM_PROGRESS && typeNorm !== AgentOSChunkType.METADATA_UPDATE) {
       rows.push({ kind: "event", id: e.id, timestamp: e.timestamp, type: typeNorm as AgentOSChunkType, payload: e.payload });
     }
   }
@@ -1066,8 +925,8 @@ export function SessionInspector() {
           </div>
         </div>
       </header>
-      <div ref={timelineScrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-        <div className="space-y-4">
+      <div ref={timelineScrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+        <div className="space-y-2.5">
           {/* Session Concurrency Info */}
           <SessionConcurrencyInfo sessionStatus={session.status} />
 
@@ -1171,8 +1030,8 @@ export function SessionInspector() {
               if (row.kind === "assistant") {
                 const isActive = !row.isFinal;
                 return (
-              <div key={`assistant-${row.streamId}`} className={clsx("rounded-2xl border px-5 py-4", "border-slate-300 bg-slate-100 text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-100")}> 
-                    <header className="mb-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div key={`assistant-${row.streamId}`} className={clsx("rounded-xl border px-3 py-2.5", "border-slate-300 bg-slate-100 text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-100")}>
+                    <header className="mb-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                       <span className="font-semibold uppercase tracking-[0.35em]">{`Agent: ${personas.find(p => p.id === row.personaId)?.displayName || row.personaId || 'Agent'}`}</span>
                       <div className="flex items-center gap-2">
                         {row.isFinal && <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">✓</span>}
@@ -1191,8 +1050,8 @@ export function SessionInspector() {
                     )}
                     <StreamingText text={row.text} isActive={isActive} />
                 {(row.logLines.length > 0 || row.progressItems.length > 0) && (
-                  <details className="mt-3 rounded-lg border border-white/10 bg-slate-950/40 p-2 text-xs">
-                    <summary className="cursor-pointer select-none text-xs text-slate-400 hover:text-slate-300">
+                  <details className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-xs dark:border-white/10 dark:bg-slate-800/50">
+                    <summary className="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                       <span className="font-medium">Logs</span>
                       <span className="ml-2 text-[10px]">({row.logLines.length + row.progressItems.length} entries)</span>
                     </summary>
@@ -1224,9 +1083,9 @@ export function SessionInspector() {
               const headerLabel = row.type === 'log' ? 'User' : String(row.type).replace(/_/g, ' ');
               return (
                 <Fragment key={row.id}>
-                  <div className={clsx("rounded-2xl border px-5 py-4", chunkClass)}>
-                    <header className="mb-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span className="font-semibold uppercase tracking-[0.35em]">{headerLabel}</span>
+                  <div className={clsx("rounded-xl border px-3 py-2", chunkClass)}>
+                    <header className="mb-1.5 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                      <span className="font-semibold uppercase tracking-[0.3em]">{headerLabel}</span>
                       <time>{new Date(row.timestamp).toLocaleTimeString()}</time>
                     </header>
                     {renderEventBody(row.type, row.payload)}
