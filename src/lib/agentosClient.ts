@@ -998,3 +998,97 @@ export async function getAgencyExecution(agencyId: string): Promise<{ execution:
     : [];
   return { execution, seats };
 }
+
+// ---------------------------------------------------------------------------
+// Skills API
+// ---------------------------------------------------------------------------
+
+/**
+ * Summary shape for a single skill as returned by `GET /api/agentos/skills`.
+ *
+ * @property name         - Unique slug / primary key.
+ * @property description  - One-line human-readable summary.
+ * @property category     - Broad grouping used for filtering (e.g. "security").
+ * @property tags         - Searchable keyword list.
+ * @property emoji        - Visual identifier for card/list rendering.
+ * @property primaryEnv   - Most important env var needed, or `null` if none required.
+ * @property requiresTools - Tool slugs the skill depends on at runtime.
+ * @property enabled      - Current toggle state.
+ */
+export interface SkillInfo {
+  name: string;
+  description: string;
+  category: string;
+  tags: string[];
+  emoji: string;
+  primaryEnv: string | null;
+  requiresTools: string[];
+  enabled: boolean;
+}
+
+/**
+ * Extended skill detail returned by `GET /api/agentos/skills/:name`.
+ * Includes a rendered SKILL.md body in the `content` field.
+ */
+export interface SkillDetail extends SkillInfo {
+  /** Markdown string — rendered from the skill's SKILL.md (or a synthesised stub). */
+  content: string;
+}
+
+/**
+ * Fetch the full list of skills from the backend catalogue.
+ *
+ * Returns an empty array on network or server error so callers can always
+ * render gracefully without try/catch boilerplate.
+ */
+export async function getSkills(): Promise<SkillInfo[]> {
+  const res = await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/skills`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+/**
+ * Fetch full detail for a single skill including its markdown content.
+ *
+ * @param name - The skill slug to look up.
+ * @returns The {@link SkillDetail} object, or `null` if not found / on error.
+ */
+export async function getSkillDetail(name: string): Promise<SkillDetail | null> {
+  const res = await fetch(
+    `${resolveWorkbenchApiBaseUrl()}/api/agentos/skills/${encodeURIComponent(name)}`
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/**
+ * Enable a skill by name.
+ *
+ * Fires a `POST /api/agentos/skills/enable` request.  The call is
+ * best-effort — if the backend is unavailable the UI will simply not
+ * reflect the change until next refresh.
+ *
+ * @param name - The skill slug to enable.
+ */
+export async function enableSkill(name: string): Promise<void> {
+  await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/skills/enable`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+}
+
+/**
+ * Disable a skill by name.
+ *
+ * Fires a `POST /api/agentos/skills/disable` request.
+ *
+ * @param name - The skill slug to disable.
+ */
+export async function disableSkill(name: string): Promise<void> {
+  await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/skills/disable`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+}

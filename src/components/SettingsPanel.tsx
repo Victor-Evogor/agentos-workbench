@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { fetchUserSettings, updateUserSettings, type ProviderKey, type ProviderUpdatePayload } from '../lib/settingsClient';
 import { GuardrailPackManager } from './GuardrailPackManager';
 import { StorageDashboard } from './StorageDashboard';
+import { SkillBrowser } from './SkillBrowser';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -254,12 +255,8 @@ export function SettingsPanel() {
         />
       )}
 
-      {/* Skills — placeholder until Task 4 */}
-      {activeTab === 'skills' && (
-        <div className="text-xs theme-text-secondary py-2">
-          Skills browser coming soon
-        </div>
-      )}
+      {/* Skills — SkillBrowser (Task 4) */}
+      {activeTab === 'skills' && <SkillBrowser />}
 
       {/* Extensions — placeholder (ExtensionManager not yet present in this panel) */}
       {activeTab === 'extensions' && (
