@@ -223,11 +223,11 @@ function TaskOutcomeHealthView({
   const [alertSeverityFilter, setAlertSeverityFilter] = useState<AlertSeverityFilter>("all");
   const [alertAckFilter, setAlertAckFilter] = useState<AlertAckFilter>("all");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(6);
+  const [limit, _setLimit] = useState(6);
   const [snapshot, setSnapshot] = useState<TaskOutcomeTelemetryResponse | null>(null);
   const [alertSnapshot, setAlertSnapshot] = useState<TaskOutcomeAlertHistoryResponse | null>(null);
   const [retentionStatus, setRetentionStatus] = useState<TaskOutcomeAlertRetentionStatus | null>(null);
-  const [lastPruneSummary, setLastPruneSummary] = useState<TaskOutcomeAlertRetentionSummary | null>(null);
+  const [_lastPruneSummary, setLastPruneSummary] = useState<TaskOutcomeAlertRetentionSummary | null>(null);
   const [config, setConfig] = useState<TaskOutcomeRuntimeConfigResponse | null>(null);
   const [acknowledgingAlertId, setAcknowledgingAlertId] = useState<string | null>(null);
   const [pruningAlerts, setPruningAlerts] = useState(false);

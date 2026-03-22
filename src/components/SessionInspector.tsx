@@ -84,7 +84,7 @@ function renderMetadataUpdate(chunk: AgentOSMetadataUpdateChunk) {
   const hasExtraUpdates = Object.keys(extraUpdates).length > 0;
   const planningPolicy = asObject(turnPlanning?.policy);
   const adaptiveExecution = asObject(turnPlanning?.adaptiveExecution);
-  const adaptiveActions = asObject(adaptiveExecution?.actions);
+  const _adaptiveActions = asObject(adaptiveExecution?.actions);
 
   const outcomeStatus =
     typeof taskOutcome?.status === "string" ? taskOutcome.status.toLowerCase() : "unknown";

@@ -550,7 +550,7 @@ export default async function memoryRoutes(fastify: FastifyInstance): Promise<vo
     }
 
     if (type === 'working') return { connected: false, ...mockMemoryEntries.working };
-    if (type && type in mockMemoryEntries) return (mockMemoryEntries as Record<string, unknown>)[type];
+    if (type && type in mockMemoryEntries) return (mockMemoryEntries as unknown as Record<string, unknown>)[type];
     return { connected: false, ...mockMemoryEntries };
   });
 
