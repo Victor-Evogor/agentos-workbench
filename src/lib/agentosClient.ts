@@ -1092,3 +1092,79 @@ export async function disableSkill(name: string): Promise<void> {
     body: JSON.stringify({ name }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Memory API
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch aggregate memory statistics across all four cognitive tiers.
+ *
+ * Returns entry counts for episodic, semantic, and procedural tiers plus
+ * the working memory token usage.  Returns `null` on network/server error
+ * so callers can gracefully degrade.
+ */
+export async function getMemoryStats(): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/stats`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/**
+ * Fetch the chronological memory operation timeline.
+ *
+ * @param since - Optional lower-bound timestamp in Unix ms.  Only entries
+ *                recorded after this timestamp are returned.
+ * @returns Array of timeline event objects, or an empty array on error.
+ */
+export async function getMemoryTimeline(since?: number): Promise<unknown[]> {
+  const url = since
+    ? `${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/timeline?since=${since}`
+    : `${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/timeline`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+/**
+ * Retrieve memory entries, optionally scoped to a single category.
+ *
+ * @param type - One of 'episodic' | 'semantic' | 'procedural' | 'working'.
+ *               Omit to retrieve all categories as a combined object.
+ * @returns Category array, working-memory object, or full store object.
+ *          Returns an empty fallback (`[]` or `{}`) on error.
+ */
+export async function getMemoryEntries(type?: string): Promise<unknown> {
+  const url = type
+    ? `${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries?type=${type}`
+    : `${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries`;
+  const res = await fetch(url);
+  if (!res.ok) return type ? [] : {};
+  return res.json();
+}
+
+/**
+ * Fetch the current working (context-window) memory snapshot.
+ *
+ * @returns Working memory object with token counts and rolling summary,
+ *          or `null` on error.
+ */
+export async function getWorkingMemory(): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/working`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/**
+ * Delete a long-term memory entry by its stable id.
+ *
+ * Searches episodic, semantic, and procedural tiers on the server side.
+ * Silently ignores network errors — the store's optimistic removal handles UI.
+ *
+ * @param id - The memory entry id to remove (e.g. 'ep-1', 'sem-2').
+ */
+export async function deleteMemoryEntry(id: string): Promise<void> {
+  await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries/${id}`, {
+    method: 'DELETE',
+  });
+}
