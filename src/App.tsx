@@ -10,6 +10,7 @@ import { PersonaCatalog } from "@/components/PersonaCatalog";
 import { WorkflowOverview } from "@/components/WorkflowOverview";
 import EvaluationDashboard from "@/components/EvaluationDashboard";
 import { PlanningDashboard } from "@/components/PlanningDashboard";
+import { MemoryDashboard } from "@/components/MemoryDashboard";
 import {
   openAgentOSStream,
   getAvailableModels,
@@ -485,6 +486,7 @@ const LEFT_TABS = [
   { key: "workflows", label: "Workflows" },
   { key: "evaluation", label: "Evaluation" },
   { key: "planning", label: "Planning" },
+  { key: "memory", label: "Memory" },
 ] as const;
 type LeftTabKey = typeof LEFT_TABS[number]["key"];
 
@@ -1476,6 +1478,7 @@ export default function App() {
                 {leftTab === 'workflows' && <WorkflowOverview />}
                 {leftTab === 'evaluation' && <EvaluationDashboard />}
                 {leftTab === 'planning' && <PlanningDashboard />}
+                {leftTab === 'memory' && <MemoryDashboard />}
               </div>
             </section>
 
