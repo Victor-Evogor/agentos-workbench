@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { X, ArrowRight, ArrowLeft, Check, Shield, Plug, Settings2, FileText } from 'lucide-react';
 import { useSessionStore, type PersonaDefinition } from '@/state/sessionStore';
 import { persistPersonaRow } from "@/lib/storageBridge";
-import type { SerializableGuardrail } from './GuardrailManager';
+/** Inline type for persona guardrail config (replaces deleted GuardrailManager export) */
+interface GuardrailConfig {
+  id: string;
+  type: string;
+  displayName: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+}
 
 interface PersonaWizardProps {
   open: boolean;
@@ -12,7 +19,7 @@ interface PersonaWizardProps {
 interface PersonaDraft extends PersonaDefinition {
   baseSystemPrompt?: string;
   modelPreference?: string;
-  guardrails?: SerializableGuardrail[];
+  guardrails?: GuardrailConfig[];
   extensions?: string[];
   costSavingStrategy?: string;
   maxTokens?: number;

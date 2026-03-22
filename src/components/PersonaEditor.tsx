@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Save, X, Shield, Plug, Settings2, User } from 'lucide-react';
 import { useSessionStore, type PersonaDefinition } from '@/state/sessionStore';
-import type { SerializableGuardrail } from './GuardrailManager';
+/** Inline type for persona guardrail config (replaces deleted GuardrailManager export) */
+type SerializableGuardrail = { id: string; type: string; displayName: string; enabled: boolean; config: Record<string, unknown> };
 
 interface PersonaEditorProps {
   persona: PersonaDefinition;
