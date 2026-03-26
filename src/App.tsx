@@ -1,40 +1,15 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { SkipLink } from "@/components/SkipLink";
 import { Sidebar } from "@/components/Sidebar";
-import { SessionInspector } from "@/components/SessionInspector";
 import { RequestComposer, type RequestComposerPayload } from "@/components/RequestComposer";
 import { AgencyComposer } from "@/components/AgencyComposer";
-import { AgencyManager } from "@/components/AgencyManager";
-import { PersonaCatalog } from "@/components/PersonaCatalog";
-import { WorkflowOverview } from "@/components/WorkflowOverview";
-import EvaluationDashboard from "@/components/EvaluationDashboard";
-import { PlanningDashboard } from "@/components/PlanningDashboard";
-import { MemoryDashboard } from "@/components/MemoryDashboard";
-import { VoicePipelinePanel } from "@/components/VoicePipelinePanel";
-import { AgencyStrategyPanel } from "@/components/AgencyStrategyPanel";
-import { ResourceControlsPanel } from "@/components/ResourceControlsPanel";
-import { StructuredOutputBuilder } from "@/components/StructuredOutputBuilder";
-import { RagConfigPanel } from "@/components/RagConfigPanel";
-import { LiveHITLQueue } from "@/components/LiveHITLQueue";
-import { CapabilityDiscoveryBrowser } from "@/components/CapabilityDiscoveryBrowser";
-import { GraphBuilder } from "@/components/GraphBuilder";
-import { EmergentToolForge } from "@/components/EmergentToolForge";
-import { ChannelsManager } from "@/components/ChannelsManager";
-import { SocialPostComposer } from "@/components/SocialPostComposer";
-import { VoiceCallMonitor } from "@/components/VoiceCallMonitor";
-import { GuardrailEvaluator } from "@/components/GuardrailEvaluator";
-import { ObservabilityDashboard } from "@/components/ObservabilityDashboard";
-import { RagDocumentManager } from "@/components/RagDocumentManager";
-import { HomeDashboard } from "@/components/HomeDashboard";
-import { AgentPlayground } from "@/components/AgentPlayground";
-import { PromptWorkspace } from "@/components/PromptWorkspace";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { CommandPalette } from "@/components/CommandPalette";
 import { eventBus } from "@/lib/eventBus";
 import {
   openAgentOSStream,
   getAvailableModels,
+  getRuntimeStatus,
   getTaskOutcomeTelemetry,
   getTaskOutcomeTelemetryConfig,
   getTaskOutcomeAlertHistory,
@@ -44,24 +19,21 @@ import {
   resolveWorkbenchApiBaseUrl,
   type AgentRoleConfig,
   type AgentOSModelInfo,
+  type RuntimeStatusResponse,
   type TaskOutcomeAlertHistoryResponse,
   type TaskOutcomeAlertRetentionStatus,
   type TaskOutcomeAlertRetentionSummary,
   type TaskOutcomeRuntimeConfigResponse,
   type TaskOutcomeTelemetryResponse
 } from "@/lib/agentosClient";
-import { bootstrapStorage, persistSessionEventRow, persistSessionRow } from "@/lib/storageBridge";
-import { TourOverlay } from "@/components/TourOverlay";
-import { ThemePanel } from "@/components/ThemePanel";
-import { AboutPanel } from "@/components/AboutPanel";
-import { SettingsPanel } from "@/components/SettingsPanel";
-import { ImportWizard } from "@/components/ImportWizard";
+import { bootstrapStorage, deleteSessionRow, persistSessionEventRow, persistSessionRow } from "@/lib/storageBridge";
 import { useUiStore } from "@/state/uiStore";
 import { usePersonas } from "@/hooks/usePersonas";
 import { useSystemTheme } from "@/hooks/useSystemTheme";
 import { useSessionStore, type AgentSession, type SessionEvent, type SessionUpdate } from "@/state/sessionStore";
 import { useTelemetryStore } from "@/state/telemetryStore";
 import { AlertTriangle, Menu, X } from "lucide-react";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   AgentOSChunkType,
@@ -74,6 +46,47 @@ import {
   type AlertAckFilter,
   type AlertSeverityFilter,
 } from "@/lib/taskOutcomeHealthFilters";
+import {
+  DATA_MODE_LABELS,
+  getWorkbenchSurfaceStatus,
+  getWorkbenchWorkspaceStatus,
+} from "@/lib/workbenchStatus";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+
+const SessionInspector = lazy(async () => ({ default: (await import("@/components/SessionInspector")).SessionInspector }));
+const AgencyManager = lazy(async () => ({ default: (await import("@/components/AgencyManager")).AgencyManager }));
+const PersonaCatalog = lazy(async () => ({ default: (await import("@/components/PersonaCatalog")).PersonaCatalog }));
+const WorkflowOverview = lazy(async () => ({ default: (await import("@/components/WorkflowOverview")).WorkflowOverview }));
+const EvaluationDashboard = lazy(() => import("@/components/EvaluationDashboard"));
+const PlanningDashboard = lazy(async () => ({ default: (await import("@/components/PlanningDashboard")).PlanningDashboard }));
+const MemoryDashboard = lazy(async () => ({ default: (await import("@/components/MemoryDashboard")).MemoryDashboard }));
+const VoicePipelinePanel = lazy(async () => ({ default: (await import("@/components/VoicePipelinePanel")).VoicePipelinePanel }));
+const AgencyStrategyPanel = lazy(async () => ({ default: (await import("@/components/AgencyStrategyPanel")).AgencyStrategyPanel }));
+const ResourceControlsPanel = lazy(async () => ({ default: (await import("@/components/ResourceControlsPanel")).ResourceControlsPanel }));
+const StructuredOutputBuilder = lazy(async () => ({ default: (await import("@/components/StructuredOutputBuilder")).StructuredOutputBuilder }));
+const LiveHITLQueue = lazy(async () => ({ default: (await import("@/components/LiveHITLQueue")).LiveHITLQueue }));
+const CapabilityDiscoveryBrowser = lazy(async () => ({ default: (await import("@/components/CapabilityDiscoveryBrowser")).CapabilityDiscoveryBrowser }));
+const MarketplaceBrowser = lazy(async () => ({ default: (await import("@/components/MarketplaceBrowser")).MarketplaceBrowser }));
+const GraphBuilder = lazy(async () => ({ default: (await import("@/components/GraphBuilder")).GraphBuilder }));
+const EmergentToolForge = lazy(async () => ({ default: (await import("@/components/EmergentToolForge")).EmergentToolForge }));
+const ChannelsManager = lazy(async () => ({ default: (await import("@/components/ChannelsManager")).ChannelsManager }));
+const SocialPostComposer = lazy(async () => ({ default: (await import("@/components/SocialPostComposer")).SocialPostComposer }));
+const VoiceCallMonitor = lazy(async () => ({ default: (await import("@/components/VoiceCallMonitor")).VoiceCallMonitor }));
+const GuardrailEvaluator = lazy(async () => ({ default: (await import("@/components/GuardrailEvaluator")).GuardrailEvaluator }));
+const ObservabilityDashboard = lazy(async () => ({ default: (await import("@/components/ObservabilityDashboard")).ObservabilityDashboard }));
+const VisionPipelinePanel = lazy(async () => ({ default: (await import("@/components/VisionPipelinePanel")).VisionPipelinePanel }));
+const ImageEditingPanel = lazy(async () => ({ default: (await import("@/components/ImageEditingPanel")).ImageEditingPanel }));
+const LLMProviderPanel = lazy(async () => ({ default: (await import("@/components/LLMProviderPanel")).LLMProviderPanel }));
+const RagWorkspace = lazy(async () => ({ default: (await import("@/components/RagWorkspace")).RagWorkspace }));
+const HomeDashboard = lazy(async () => ({ default: (await import("@/components/HomeDashboard")).HomeDashboard }));
+const AgentPlayground = lazy(async () => ({ default: (await import("@/components/AgentPlayground")).AgentPlayground }));
+const PromptWorkspace = lazy(async () => ({ default: (await import("@/components/PromptWorkspace")).PromptWorkspace }));
+const TourOverlay = lazy(async () => ({ default: (await import("@/components/TourOverlay")).TourOverlay }));
+const ThemePanel = lazy(async () => ({ default: (await import("@/components/ThemePanel")).ThemePanel }));
+const AboutPanel = lazy(async () => ({ default: (await import("@/components/AboutPanel")).AboutPanel }));
+const SettingsPanel = lazy(async () => ({ default: (await import("@/components/SettingsPanel")).SettingsPanel }));
+const ImportWizard = lazy(async () => ({ default: (await import("@/components/ImportWizard")).ImportWizard }));
+const CommandPalette = lazy(async () => ({ default: (await import("@/components/CommandPalette")).CommandPalette }));
 
 type LiveTaskOutcomeAlert = AgentOSTaskOutcomeAlert & {
   id: string;
@@ -85,6 +98,30 @@ type TaskOutcomeHealthScopeJump = {
   scope: string;
   token: number;
 };
+
+function SuspensePanel({
+  label,
+  children,
+  lines = 10,
+}: {
+  label: string;
+  children: ReactNode;
+  lines?: number;
+}) {
+  return (
+    <ErrorBoundary label={label}>
+      <Suspense
+        fallback={(
+          <div className="card-panel--strong p-4 transition-theme">
+            <LoadingSkeleton withHeader lines={lines} />
+          </div>
+        )}
+      >
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -518,6 +555,7 @@ const LEFT_TABS = [
   { key: "rag", label: "RAG" },
   { key: "hitl", label: "HITL" },
   { key: "capabilities", label: "Capabilities" },
+  { key: "marketplace", label: "Marketplace" },
   { key: "graph-builder", label: "Graph Builder" },
   { key: "tool-forge", label: "Tool Forge" },
   { key: "channels", label: "Channels" },
@@ -525,30 +563,46 @@ const LEFT_TABS = [
   { key: "call-monitor", label: "Call Monitor" },
   { key: "guardrail-eval", label: "Guardrail Eval" },
   { key: "observability", label: "Observability" },
-  { key: "rag-docs", label: "RAG Docs" },
+  { key: "vision-pipeline", label: "Vision" },
+  { key: "image-editing", label: "Image Edit" },
+  { key: "llm-providers", label: "LLM Providers" },
 ] as const;
 type LeftTabKey = typeof LEFT_TABS[number]["key"];
 
+function normalizeLeftTabKey(key: string | null | undefined): LeftTabKey | undefined {
+  if (key === "rag-docs") {
+    return "rag";
+  }
+  if (LEFT_TABS.some((tab) => tab.key === key)) {
+    return key as LeftTabKey;
+  }
+  return undefined;
+}
+
 export default function App() {
   const disableAutoWelcomeTour = import.meta.env.VITE_E2E_MODE === "true";
-  const preferredLeftPanel = useUiStore((s) => s.preferredLeftPanel) as LeftTabKey | undefined;
+  const autoEnableSampleWorkspace = import.meta.env.VITE_E2E_MODE === "true";
+  const preferredLeftPanel = useUiStore((s) => s.preferredLeftPanel);
   const setPreferredLeftPanel = useUiStore((s) => s.setPreferredLeftPanel);
-  const leftTab: LeftTabKey = LEFT_TABS.some((tab) => tab.key === preferredLeftPanel)
-    ? (preferredLeftPanel as LeftTabKey)
-    : "home";
+  const sampleWorkspaceMode = useUiStore((s) => s.sampleWorkspaceMode);
+  const setSampleWorkspaceMode = useUiStore((s) => s.setSampleWorkspaceMode);
+  const leftTab: LeftTabKey = normalizeLeftTabKey(preferredLeftPanel) ?? "home";
   const setLeftTab = useCallback((key: LeftTabKey) => {
-    setPreferredLeftPanel(key);
+    setPreferredLeftPanel(normalizeLeftTabKey(key) ?? "home");
   }, [setPreferredLeftPanel]);
   const [showTour, setShowTour] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showSampleWorkspaceDialog, setShowSampleWorkspaceDialog] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [modelData, setModelData] = useState<AgentOSModelInfo[]>([]);
+  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusResponse | null | undefined>(undefined);
+  const [runtimeStatusLoading, setRuntimeStatusLoading] = useState(true);
   const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined);
   const [liveTaskOutcomeAlerts, setLiveTaskOutcomeAlerts] = useState<LiveTaskOutcomeAlert[]>([]);
   const [taskOutcomeAlertToasts, setTaskOutcomeAlertToasts] = useState<LiveTaskOutcomeAlert[]>([]);
@@ -571,8 +625,10 @@ export default function App() {
   const personas = useSessionStore((state) => state.personas);
   const addPersona = useSessionStore((state) => state.addPersona);
   const agencies = useSessionStore((state) => state.agencies);
+  const removeAgency = useSessionStore((state) => state.removeAgency);
   const sessions = useSessionStore((state) => state.sessions);
   const addAgency = useSessionStore((state) => state.addAgency);
+  const removeSession = useSessionStore((state) => state.removeSession);
   const applyAgencySnapshot = useSessionStore((state) => state.applyAgencySnapshot);
   const applyWorkflowSnapshot = useSessionStore((state) => state.applyWorkflowSnapshot);
   const setPersonas = useSessionStore((state) => state.setPersonas);
@@ -602,12 +658,20 @@ export default function App() {
     appendEvent(sessionId, event);
     syncEventToStorage(sessionId, event);
   }, [appendEvent, syncEventToStorage]);
+
+  useEffect(() => {
+    if (preferredLeftPanel === "rag-docs") {
+      setPreferredLeftPanel("rag");
+    }
+  }, [preferredLeftPanel, setPreferredLeftPanel]);
   
   const activeSession = useMemo(() => {
     return activeSessionId ? sessions.find(s => s.id === activeSessionId) : undefined;
   }, [activeSessionId, sessions]);
   const isAgencyStreaming = activeSession?.targetType === 'agency' && activeSession.status === 'streaming';
   const liveAlertCount = liveTaskOutcomeAlerts.length;
+  const workspaceStatus = useMemo(() => getWorkbenchWorkspaceStatus(runtimeStatus), [runtimeStatus]);
+  const activeSurfaceStatus = useMemo(() => getWorkbenchSurfaceStatus(leftTab), [leftTab]);
 
   const streamHandles = useRef<Record<string, () => void>>({});
   const telemetry = useTelemetryStore();
@@ -711,6 +775,86 @@ export default function App() {
     };
   }, [addPersona, upsertSession]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setRuntimeStatusLoading(true);
+        const status = await getRuntimeStatus();
+        if (!cancelled) {
+          setRuntimeStatus(status);
+        }
+      } catch {
+        if (!cancelled) {
+          setRuntimeStatus(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setRuntimeStatusLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady || sampleWorkspaceMode !== null || !autoEnableSampleWorkspace) {
+      return;
+    }
+    setSampleWorkspaceMode("sample");
+  }, [autoEnableSampleWorkspace, sampleWorkspaceMode, setSampleWorkspaceMode, storageReady]);
+
+  useEffect(() => {
+    if (sampleWorkspaceMode !== null) {
+      setShowSampleWorkspaceDialog(false);
+    }
+  }, [sampleWorkspaceMode]);
+
+  useEffect(() => {
+    if (!storageReady || sampleWorkspaceMode !== "clean") {
+      return;
+    }
+
+    const demoSessionIds = [DEMO_PERSONA_SESSION_ID, DEMO_AGENCY_SESSION_ID];
+    const existingDemoSessionIds = sessions
+      .filter((session) => demoSessionIds.includes(session.id))
+      .map((session) => session.id);
+
+    const hasDemoAgency = agencies.some((agency) => agency.id === DEMO_AGENCY_ID);
+    if (existingDemoSessionIds.length === 0 && !hasDemoAgency) {
+      return;
+    }
+
+    const fallbackSessionId =
+      activeSessionId && demoSessionIds.includes(activeSessionId)
+        ? sessions.find((session) => !demoSessionIds.includes(session.id))?.id ?? null
+        : null;
+
+    if (fallbackSessionId) {
+      setActiveSession(fallbackSessionId);
+    }
+
+    for (const sessionId of existingDemoSessionIds) {
+      removeSession(sessionId);
+      void deleteSessionRow(sessionId);
+    }
+
+    if (hasDemoAgency) {
+      removeAgency(DEMO_AGENCY_ID);
+    }
+  }, [
+    activeSessionId,
+    agencies,
+    removeAgency,
+    removeSession,
+    sampleWorkspaceMode,
+    sessions,
+    setActiveSession,
+    storageReady,
+  ]);
+
   // Fetch available models from AgentOS
   useEffect(() => {
     let mounted = true;
@@ -744,7 +888,7 @@ export default function App() {
   }, []);
 
   const ensureDemoPersonaSession = useCallback(() => {
-    if (!storageReady) return;
+    if (!storageReady || sampleWorkspaceMode !== "sample") return;
     const hasDemo = sessions.some((session) => session.id === DEMO_PERSONA_SESSION_ID);
     const remoteIds = personas.filter((p) => p.source === "remote").map((p) => p.id);
     const personaId = preferDefaultPersona(remoteIds) ?? personas[0]?.id ?? null;
@@ -764,7 +908,16 @@ export default function App() {
     if (!activeSessionId) {
       setActiveSession(DEMO_PERSONA_SESSION_ID);
     }
-  }, [storageReady, sessions, personas, preferDefaultPersona, activeSessionId, commitSession, setActiveSession]);
+  }, [
+    storageReady,
+    sampleWorkspaceMode,
+    sessions,
+    personas,
+    preferDefaultPersona,
+    activeSessionId,
+    commitSession,
+    setActiveSession,
+  ]);
 
   useEffect(() => {
     ensureDemoPersonaSession();
@@ -772,7 +925,7 @@ export default function App() {
 
   // Seed a demo agency if none exists, to make the dashboard usable immediately
   const ensureDemoAgencySession = useCallback(() => {
-    if (!storageReady) return;
+    if (!storageReady || sampleWorkspaceMode !== "sample") return;
     const remotePersonas = personas.filter((p) => p.source === "remote");
     if (remotePersonas.length < 1) return;
     let demoAgency = agencies.find((agency) => agency.id === DEMO_AGENCY_ID) ?? null;
@@ -807,7 +960,7 @@ export default function App() {
         events: []
       });
     }
-  }, [storageReady, agencies, personas, addAgency, commitSession, sessions]);
+  }, [storageReady, sampleWorkspaceMode, agencies, personas, addAgency, commitSession, sessions]);
 
   useEffect(() => {
     ensureDemoAgencySession();
@@ -843,7 +996,7 @@ export default function App() {
   // Connect the real-time event bus
   useEffect(() => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:3001';
+      const baseUrl = resolveWorkbenchApiBaseUrl();
       eventBus.connect(`${baseUrl}/api/events`);
     } catch {
       // Non-fatal — event bus is best-effort
@@ -1221,10 +1374,22 @@ export default function App() {
               </span>
             </a>
           </div>
-          <nav className="flex items-center gap-4 text-xs">
+          <nav className="flex items-center gap-3 text-xs">
             <a href="https://agentos.sh/docs" target="_blank" rel="noreferrer" className="theme-text-secondary transition-colors hover:text-[color:var(--color-accent-primary)]">Docs</a>
             <a href="https://github.com/framersai/agentos" target="_blank" rel="noreferrer" className="theme-text-secondary transition-colors hover:text-[color:var(--color-accent-primary)]">GitHub</a>
-            <a href="https://vca.chat" target="_blank" rel="noreferrer" className="theme-text-secondary transition-colors hover:text-[color:var(--color-accent-primary)]">Marketplace</a>
+            <button
+              type="button"
+              onClick={() => setLeftTab("marketplace")}
+              className="theme-text-secondary transition-colors hover:text-[color:var(--color-accent-primary)]"
+              title="Open the workbench marketplace"
+            >
+              Marketplace
+            </button>
+            <DataSourceBadge
+              tone={workspaceStatus.tone}
+              label={`Workspace ${workspaceStatus.label}`}
+              className="hidden md:inline-flex"
+            />
             <div
               className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 ${
                 liveAlertCount > 0
@@ -1255,7 +1420,9 @@ export default function App() {
       {showThemePanel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
           <div className="card-panel--strong w-full max-w-lg p-4 shadow-2xl shadow-[rgba(15,23,42,0.2)]">
-            <ThemePanel />
+            <Suspense fallback={<LoadingSkeleton withHeader lines={8} className="p-2" />}>
+              <ThemePanel />
+            </Suspense>
             <div className="mt-3 flex justify-end">
               <button onClick={() => setShowThemePanel(false)} className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-3 py-1 text-xs theme-text-secondary transition-colors hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Close</button>
             </div>
@@ -1280,7 +1447,9 @@ export default function App() {
         >
           <div className="card-panel--strong flex h-full max-h-[90vh] w-full max-w-3xl flex-col shadow-2xl shadow-[rgba(15,23,42,0.2)] transition-theme">
             <div className="flex-1 overflow-y-auto p-4">
-              <SettingsPanel />
+              <Suspense fallback={<LoadingSkeleton withHeader lines={12} className="p-2" />}>
+                <SettingsPanel />
+              </Suspense>
             </div>
             <div className="border-t theme-border p-4">
               <div className="flex justify-end">
@@ -1313,7 +1482,9 @@ export default function App() {
         >
           <div className="card-panel--strong flex h-full max-h-[90vh] w-full max-w-3xl flex-col shadow-2xl shadow-[rgba(15,23,42,0.2)] transition-theme">
             <div className="flex-1 overflow-y-auto p-4">
-              <AboutPanel />
+              <Suspense fallback={<LoadingSkeleton withHeader lines={10} className="p-2" />}>
+                <AboutPanel />
+              </Suspense>
             </div>
             <div className="border-t theme-border p-4">
               <div className="flex justify-end">
@@ -1324,6 +1495,50 @@ export default function App() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {(showSampleWorkspaceDialog || (storageReady && sampleWorkspaceMode === null && !autoEnableSampleWorkspace)) && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+          <div className="card-panel--strong w-full max-w-xl p-5 shadow-2xl shadow-[rgba(15,23,42,0.2)] transition-theme">
+            <div className="space-y-2">
+              <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Workspace Setup</p>
+              <h2 className="text-lg font-semibold theme-text-primary">Choose how the workbench should start</h2>
+              <p className="text-sm leading-relaxed theme-text-secondary">
+                Sample data makes the workbench easier to explore, but it also introduces seeded sessions and agencies.
+                Clean mode avoids generated demo artifacts and leaves the workspace empty until you create something.
+              </p>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSampleWorkspaceMode("clean");
+                  setShowSampleWorkspaceDialog(false);
+                }}
+                className="rounded-xl border theme-border theme-bg-primary p-4 text-left transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <DataSourceBadge tone="local" label="Clean workspace" />
+                <p className="mt-3 text-sm font-semibold theme-text-primary">Start without sample sessions</p>
+                <p className="mt-1 text-xs leading-relaxed theme-text-secondary">
+                  Best if you want the UI to reflect only real agents, runs, and content you create.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSampleWorkspaceMode("sample");
+                  setShowSampleWorkspaceDialog(false);
+                }}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-left transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <DataSourceBadge tone="demo" label="Sample workspace" />
+                <p className="mt-3 text-sm font-semibold theme-text-primary">Load guided demo sessions</p>
+                <p className="mt-1 text-xs leading-relaxed theme-text-secondary">
+                  Seeds a demo persona session and agency so the dashboard is populated immediately.
+                </p>
+              </button>
             </div>
           </div>
         </div>
@@ -1415,21 +1630,53 @@ export default function App() {
               <div className="ml-auto" />
                 </div>
               </div>
+              <div className="flex-none rounded-xl border theme-border theme-bg-secondary-soft px-3 py-2 transition-theme">
+                <div className="flex flex-wrap items-center gap-2">
+                  <DataSourceBadge tone={activeSurfaceStatus.mode} label={`${activeSurfaceStatus.label} ${DATA_MODE_LABELS[activeSurfaceStatus.mode]}`} />
+                  {runtimeStatusLoading ? (
+                    <DataSourceBadge tone="neutral" label="Runtime checking" />
+                  ) : (
+                    <DataSourceBadge
+                      tone={runtimeStatus?.runtime.connected ? "runtime" : "demo"}
+                      label={runtimeStatus?.runtime.connected ? "Runtime connected" : "Runtime standalone"}
+                    />
+                  )}
+                  {(activeSurfaceStatus.mode === "demo" || activeSurfaceStatus.mode === "mixed") && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSettingsModal(true)}
+                      className="rounded-full border theme-border px-2 py-1 text-[10px] theme-text-secondary transition hover:opacity-90"
+                    >
+                      Runtime details
+                    </button>
+                  )}
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed theme-text-secondary">
+                  {activeSurfaceStatus.description}
+                </p>
+              </div>
               <div className="flex-1 overflow-y-auto pr-1">
                 {leftTab === 'home' && (
-                  <ErrorBoundary label="Home Dashboard">
-                    <HomeDashboard onNavigate={(key) => setLeftTab(key as LeftTabKey)} />
-                  </ErrorBoundary>
+                  <SuspensePanel label="Home Dashboard" lines={12}>
+                    <HomeDashboard
+                      onNavigate={(key) => setLeftTab(key as LeftTabKey)}
+                      runtimeStatus={runtimeStatus}
+                      runtimeStatusLoading={runtimeStatusLoading}
+                      workspaceStatus={workspaceStatus}
+                      sampleWorkspaceMode={sampleWorkspaceMode}
+                      onManageSampleWorkspace={() => setShowSampleWorkspaceDialog(true)}
+                    />
+                  </SuspensePanel>
                 )}
                 {leftTab === 'playground' && (
-                  <ErrorBoundary label="Agent Playground">
+                  <SuspensePanel label="Agent Playground" lines={14}>
                     <AgentPlayground />
-                  </ErrorBoundary>
+                  </SuspensePanel>
                 )}
                 {leftTab === 'prompt-workspace' && (
-                  <ErrorBoundary label="Prompt Workspace">
+                  <SuspensePanel label="Prompt Workspace" lines={12}>
                     <PromptWorkspace />
-                  </ErrorBoundary>
+                  </SuspensePanel>
                 )}
                 {leftTab === 'compose' && (
                   activeSession?.targetType === 'agency' ? (
@@ -1565,27 +1812,30 @@ export default function App() {
                     <RequestComposer key={activeSessionId || 'compose'} onSubmit={handleSubmit} />
                   )
                 )}
-                {leftTab === 'personas' && <ErrorBoundary label="Personas"><PersonaCatalog /></ErrorBoundary>}
-                {leftTab === 'agency' && <ErrorBoundary label="Agency"><AgencyManager /></ErrorBoundary>}
-                {leftTab === 'workflows' && <ErrorBoundary label="Workflows"><WorkflowOverview /></ErrorBoundary>}
-                {leftTab === 'evaluation' && <ErrorBoundary label="Evaluation"><EvaluationDashboard /></ErrorBoundary>}
-                {leftTab === 'planning' && <ErrorBoundary label="Planning"><PlanningDashboard /></ErrorBoundary>}
-                {leftTab === 'memory' && <ErrorBoundary label="Memory"><MemoryDashboard /></ErrorBoundary>}
-                {leftTab === 'voice' && <ErrorBoundary label="Voice"><VoicePipelinePanel /></ErrorBoundary>}
-                {leftTab === 'strategy' && <ErrorBoundary label="Strategy"><AgencyStrategyPanel /></ErrorBoundary>}
-                {leftTab === 'resources' && <ErrorBoundary label="Resources"><ResourceControlsPanel /></ErrorBoundary>}
-                {leftTab === 'schema' && <ErrorBoundary label="Schema"><StructuredOutputBuilder /></ErrorBoundary>}
-                {leftTab === 'rag' && <ErrorBoundary label="RAG"><RagConfigPanel /></ErrorBoundary>}
-                {leftTab === 'hitl' && <ErrorBoundary label="HITL"><LiveHITLQueue /></ErrorBoundary>}
-                {leftTab === 'capabilities' && <ErrorBoundary label="Capabilities"><CapabilityDiscoveryBrowser /></ErrorBoundary>}
-                {leftTab === 'graph-builder' && <ErrorBoundary label="Graph Builder"><GraphBuilder /></ErrorBoundary>}
-                {leftTab === 'tool-forge' && <ErrorBoundary label="Tool Forge"><EmergentToolForge /></ErrorBoundary>}
-                {leftTab === 'channels' && <ErrorBoundary label="Channels"><ChannelsManager /></ErrorBoundary>}
-                {leftTab === 'social' && <ErrorBoundary label="Social"><SocialPostComposer /></ErrorBoundary>}
-                {leftTab === 'call-monitor' && <ErrorBoundary label="Call Monitor"><VoiceCallMonitor /></ErrorBoundary>}
-                {leftTab === 'guardrail-eval' && <ErrorBoundary label="Guardrail Eval"><GuardrailEvaluator /></ErrorBoundary>}
-                {leftTab === 'observability' && <ErrorBoundary label="Observability"><ObservabilityDashboard /></ErrorBoundary>}
-                {leftTab === 'rag-docs' && <ErrorBoundary label="RAG Docs"><RagDocumentManager /></ErrorBoundary>}
+                {leftTab === 'personas' && <SuspensePanel label="Personas"><PersonaCatalog /></SuspensePanel>}
+                {leftTab === 'agency' && <SuspensePanel label="Agency"><AgencyManager /></SuspensePanel>}
+                {leftTab === 'workflows' && <SuspensePanel label="Workflows"><WorkflowOverview /></SuspensePanel>}
+                {leftTab === 'evaluation' && <SuspensePanel label="Evaluation"><EvaluationDashboard /></SuspensePanel>}
+                {leftTab === 'planning' && <SuspensePanel label="Planning" lines={14}><PlanningDashboard /></SuspensePanel>}
+                {leftTab === 'memory' && <SuspensePanel label="Memory"><MemoryDashboard /></SuspensePanel>}
+                {leftTab === 'voice' && <SuspensePanel label="Voice"><VoicePipelinePanel /></SuspensePanel>}
+                {leftTab === 'strategy' && <SuspensePanel label="Strategy"><AgencyStrategyPanel /></SuspensePanel>}
+                {leftTab === 'resources' && <SuspensePanel label="Resources"><ResourceControlsPanel /></SuspensePanel>}
+                {leftTab === 'schema' && <SuspensePanel label="Schema"><StructuredOutputBuilder /></SuspensePanel>}
+                {leftTab === 'rag' && <SuspensePanel label="RAG" lines={14}><RagWorkspace /></SuspensePanel>}
+                {leftTab === 'hitl' && <SuspensePanel label="HITL"><LiveHITLQueue /></SuspensePanel>}
+                {leftTab === 'capabilities' && <SuspensePanel label="Capabilities"><CapabilityDiscoveryBrowser /></SuspensePanel>}
+                {leftTab === 'marketplace' && <SuspensePanel label="Marketplace"><MarketplaceBrowser /></SuspensePanel>}
+                {leftTab === 'graph-builder' && <SuspensePanel label="Graph Builder" lines={14}><GraphBuilder /></SuspensePanel>}
+                {leftTab === 'tool-forge' && <SuspensePanel label="Tool Forge" lines={14}><EmergentToolForge /></SuspensePanel>}
+                {leftTab === 'channels' && <SuspensePanel label="Channels" lines={12}><ChannelsManager /></SuspensePanel>}
+                {leftTab === 'social' && <SuspensePanel label="Social" lines={12}><SocialPostComposer /></SuspensePanel>}
+                {leftTab === 'call-monitor' && <SuspensePanel label="Call Monitor"><VoiceCallMonitor /></SuspensePanel>}
+                {leftTab === 'guardrail-eval' && <SuspensePanel label="Guardrail Eval"><GuardrailEvaluator /></SuspensePanel>}
+                {leftTab === 'observability' && <SuspensePanel label="Observability"><ObservabilityDashboard /></SuspensePanel>}
+                {leftTab === 'vision-pipeline' && <SuspensePanel label="Vision Pipeline"><VisionPipelinePanel /></SuspensePanel>}
+                {leftTab === 'image-editing' && <SuspensePanel label="Image Editing"><ImageEditingPanel /></SuspensePanel>}
+                {leftTab === 'llm-providers' && <SuspensePanel label="LLM Providers"><LLMProviderPanel /></SuspensePanel>}
               </div>
             </section>
 
@@ -1595,7 +1845,9 @@ export default function App() {
               aria-label={t("app.labels.outputsPanel", { defaultValue: "Outputs and results" })}
             >
               <div className="flex-1 min-h-0 relative">
-                <SessionInspector />
+                <SuspensePanel label="Session Inspector" lines={16}>
+                  <SessionInspector />
+                </SuspensePanel>
               </div>
               <details className="flex-none group" open={false}>
                 <summary className="cursor-pointer select-none flex items-center gap-2 border-t border-slate-200 dark:border-white/10 px-2 py-1.5 text-[10px] uppercase tracking-[0.3em] theme-text-muted hover:theme-text-secondary transition-colors">
@@ -1693,22 +1945,38 @@ export default function App() {
           })}
         </div>
       )}
-      <TourOverlay
-        open={showTour}
-        steps={tourSteps}
-        onClose={() => setShowTour(false)}
-        onDontShowAgain={() => dismissWelcomeTour()}
-        onRemindLater={() => snoozeWelcomeTour(24)}
-      />
-      <ImportWizard open={showImport} onClose={() => setShowImport(false)} />
-      <CommandPalette
-        open={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
-        onNavigate={(key) => {
-          setLeftTab(key as LeftTabKey);
-          setShowCommandPalette(false);
-        }}
-      />
+      <Suspense fallback={null}>
+        <TourOverlay
+          open={showTour}
+          steps={tourSteps}
+          onClose={() => setShowTour(false)}
+          onDontShowAgain={() => dismissWelcomeTour()}
+          onRemindLater={() => snoozeWelcomeTour(24)}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <ImportWizard open={showImport} onClose={() => setShowImport(false)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CommandPalette
+          open={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+          onNavigate={(key) => {
+            if (key === "settings") {
+              setShowSettingsModal(true);
+              setShowCommandPalette(false);
+              return;
+            }
+            if (key === "about") {
+              setShowAboutModal(true);
+              setShowCommandPalette(false);
+              return;
+            }
+            setLeftTab(key as LeftTabKey);
+            setShowCommandPalette(false);
+          }}
+        />
+      </Suspense>
     </div>
   );
 }
