@@ -12,6 +12,12 @@ import EvaluationDashboard from "@/components/EvaluationDashboard";
 import { PlanningDashboard } from "@/components/PlanningDashboard";
 import { MemoryDashboard } from "@/components/MemoryDashboard";
 import { VoicePipelinePanel } from "@/components/VoicePipelinePanel";
+import { AgencyStrategyPanel } from "@/components/AgencyStrategyPanel";
+import { ResourceControlsPanel } from "@/components/ResourceControlsPanel";
+import { StructuredOutputBuilder } from "@/components/StructuredOutputBuilder";
+import { RagConfigPanel } from "@/components/RagConfigPanel";
+import { LiveHITLQueue } from "@/components/LiveHITLQueue";
+import { CapabilityDiscoveryBrowser } from "@/components/CapabilityDiscoveryBrowser";
 import {
   openAgentOSStream,
   getAvailableModels,
@@ -489,6 +495,12 @@ const LEFT_TABS = [
   { key: "planning", label: "Planning" },
   { key: "memory", label: "Memory" },
   { key: "voice", label: "Voice" },
+  { key: "strategy", label: "Strategy" },
+  { key: "resources", label: "Resources" },
+  { key: "schema", label: "Schema" },
+  { key: "rag", label: "RAG" },
+  { key: "hitl", label: "HITL" },
+  { key: "capabilities", label: "Capabilities" },
 ] as const;
 type LeftTabKey = typeof LEFT_TABS[number]["key"];
 
@@ -1482,6 +1494,12 @@ export default function App() {
                 {leftTab === 'planning' && <PlanningDashboard />}
                 {leftTab === 'memory' && <MemoryDashboard />}
                 {leftTab === 'voice' && <VoicePipelinePanel />}
+                {leftTab === 'strategy' && <AgencyStrategyPanel />}
+                {leftTab === 'resources' && <ResourceControlsPanel />}
+                {leftTab === 'schema' && <StructuredOutputBuilder />}
+                {leftTab === 'rag' && <RagConfigPanel />}
+                {leftTab === 'hitl' && <LiveHITLQueue />}
+                {leftTab === 'capabilities' && <CapabilityDiscoveryBrowser />}
               </div>
             </section>
 

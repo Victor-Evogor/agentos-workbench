@@ -3,7 +3,21 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { idbStorage } from '@/utils/idbStorage';
 import { sqlStateStorage } from '@/lib/sqlStateStorage';
 
-type LeftPanelKey = 'compose' | 'personas' | 'agency' | 'workflows' | 'evaluation' | 'planning' | 'memory' | 'voice';
+type LeftPanelKey =
+  | 'compose'
+  | 'personas'
+  | 'agency'
+  | 'workflows'
+  | 'evaluation'
+  | 'planning'
+  | 'memory'
+  | 'voice'
+  | 'strategy'
+  | 'resources'
+  | 'schema'
+  | 'rag'
+  | 'hitl'
+  | 'capabilities';
 
 interface UiState {
   welcomeTourDismissed: boolean;

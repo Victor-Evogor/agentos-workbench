@@ -12,6 +12,8 @@ import userRoutes from './routes/user';
 import skillRoutes from './routes/skills';
 import memoryRoutes from './routes/memory.js';
 import voiceRoutes from './routes/voice';
+import approvalsRoutes from './routes/approvals';
+import discoveryRoutes from './routes/discovery';
 import { initializeAgentOS } from './lib/agentos';
 import { config } from 'dotenv';
 config()
@@ -80,6 +82,8 @@ async function main() {
   server.register(skillRoutes, { prefix: '/api/agentos' });
   server.register(memoryRoutes, { prefix: '/api/agentos' });
   server.register(voiceRoutes, { prefix: '/api/voice' });
+  server.register(approvalsRoutes, { prefix: '/api/agency' });
+  server.register(discoveryRoutes, { prefix: '/api/agency' });
 
   // Health check
   server.get('/health', {
