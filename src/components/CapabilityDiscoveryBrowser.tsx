@@ -20,7 +20,7 @@
  * Falls back to an empty state when the backend route is unavailable.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   ChevronDown,
@@ -30,10 +30,14 @@ import {
   BookOpen,
   Puzzle,
   Package,
+  Play,
   type LucideIcon,
 } from 'lucide-react';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
+import { ToolDryRun } from '@/components/ToolDryRun';
 import { resolveWorkbenchApiBaseUrl } from '@/lib/agentosClient';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 import { useSessionStore } from '@/state/sessionStore';
 
 // ---------------------------------------------------------------------------
@@ -71,6 +75,19 @@ function buildBaseUrl(): string {
   }
 }
 
+function resolveWorkbenchDataMode(value: unknown, fallback: WorkbenchDataMode): WorkbenchDataMode {
+  return value === 'runtime' || value === 'mixed' || value === 'demo' || value === 'local'
+    ? value
+    : fallback;
+}
+
+function capabilityBadgeLabel(dataMode: WorkbenchDataMode): string {
+  if (dataMode === 'runtime') return 'Runtime Discovery';
+  if (dataMode === 'mixed') return 'Mixed Discovery';
+  if (dataMode === 'local') return 'Local Discovery Fallback';
+  return 'Demo Discovery';
+}
+
 const KIND_ICON: Record<CapabilityKind, LucideIcon> = {
   tool: Wrench,
   skill: BookOpen,
@@ -94,7 +111,9 @@ const TIER_BADGE: Record<number, { label: string; cls: string }> = {
 function TierBadge({ tier }: { tier: 0 | 1 | 2 }) {
   const { label, cls } = TIER_BADGE[tier] ?? TIER_BADGE[1]!;
   return (
-    <span className={`rounded-full border px-1.5 py-px text-[9px] font-medium uppercase tracking-wide ${cls}`}>
+    <span
+      className={`rounded-full border px-1.5 py-px text-[9px] font-medium uppercase tracking-wide ${cls}`}
+    >
       {label}
     </span>
   );
@@ -107,10 +126,13 @@ function TierBadge({ tier }: { tier: 0 | 1 | 2 }) {
 interface CapabilityCardProps {
   item: CapabilityItem;
   onAssign: (item: CapabilityItem) => void;
+  /** Callback to open the dry-run panel for this capability. */
+  onTryIt: (item: CapabilityItem) => void;
   agencyId: string | null;
+  assigned: boolean;
 }
 
-function CapabilityCard({ item, onAssign, agencyId }: CapabilityCardProps) {
+function CapabilityCard({ item, onAssign, onTryIt, agencyId, assigned }: CapabilityCardProps) {
   const [expanded, setExpanded] = useState(false);
   const KindIcon = KIND_ICON[item.kind] ?? Wrench;
   const kindColor = KIND_COLORS[item.kind] ?? 'theme-text-secondary';
@@ -139,14 +161,32 @@ function CapabilityCard({ item, onAssign, agencyId }: CapabilityCardProps) {
             {item.description}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          title={expanded ? 'Collapse capability details.' : 'Expand to see schema, example, and dependencies.'}
-          className="shrink-0 rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-1.5 py-0.5 text-[10px] theme-text-secondary transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Try It button for testing tool execution */}
+          {(item.kind === 'tool' || item.kind === 'skill') && (
+            <button
+              type="button"
+              onClick={() => onTryIt(item)}
+              title={`Open dry-run panel for ${item.name}.`}
+              className="inline-flex items-center gap-0.5 rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-400 transition hover:bg-sky-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            >
+              <Play size={8} />
+              Try It
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            title={
+              expanded
+                ? 'Collapse capability details.'
+                : 'Expand to see schema, example, and dependencies.'
+            }
+            className="shrink-0 rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-1.5 py-0.5 text-[10px] theme-text-secondary transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+          </button>
+        </div>
       </div>
 
       {/* Expanded details */}
@@ -154,7 +194,9 @@ function CapabilityCard({ item, onAssign, agencyId }: CapabilityCardProps) {
         <div className="mt-2 space-y-2 border-t theme-border pt-2">
           {item.schema && (
             <div>
-              <p className="mb-0.5 text-[9px] uppercase tracking-[0.35em] theme-text-muted">Schema</p>
+              <p className="mb-0.5 text-[9px] uppercase tracking-[0.35em] theme-text-muted">
+                Schema
+              </p>
               <pre className="overflow-auto rounded border theme-border theme-bg-primary px-2 py-1.5 font-mono text-[9px] theme-text-secondary max-h-32">
                 {item.schema}
               </pre>
@@ -191,10 +233,20 @@ function CapabilityCard({ item, onAssign, agencyId }: CapabilityCardProps) {
             <button
               type="button"
               onClick={() => onAssign(item)}
-              title={`Assign ${item.name} to the active agency's tool list.`}
-              className="mt-1 inline-flex items-center gap-1 rounded-full border theme-border bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold text-sky-400 transition hover:bg-sky-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              disabled={assigned}
+              title={
+                assigned
+                  ? `${item.name} is already assigned to the active agency.`
+                  : `Assign ${item.name} to the active agency's tool list.`
+              }
+              className={[
+                'mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2',
+                assigned
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 cursor-default'
+                  : 'theme-border bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 focus-visible:ring-sky-500',
+              ].join(' ')}
             >
-              + Assign to agency
+              {assigned ? 'Assigned to agency' : '+ Assign to agency'}
             </button>
           )}
         </div>
@@ -227,37 +279,51 @@ export function CapabilityDiscoveryBrowser() {
   const [results, setResults] = useState<CapabilityItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
+  const [dataMode, setDataMode] = useState<WorkbenchDataMode>('mixed');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Currently selected capability for the dry-run testing panel. */
+  const [dryRunTool, setDryRunTool] = useState<{
+    id: string;
+    name: string;
+    schema?: Record<string, unknown>;
+  } | null>(null);
 
   const activeAgencyId = useSessionStore((s) => s.activeAgencyId);
   const updateAgency = useSessionStore((s) => s.updateAgency);
   const agencies = useSessionStore((s) => s.agencies);
   const activeAgency = agencies.find((a) => a.id === activeAgencyId) ?? null;
+  const assignedIds = useMemo(() => {
+    const existingCapabilities = Array.isArray(activeAgency?.metadata?.capabilities)
+      ? (activeAgency.metadata.capabilities as string[])
+      : [];
+    return new Set(existingCapabilities);
+  }, [activeAgency]);
 
-  const doSearch = useCallback(
-    async (q: string, kind: CapabilityKind | 'all') => {
-      setLoading(true);
-      setError(null);
-      try {
-        const base = buildBaseUrl();
-        const params = new URLSearchParams();
-        if (q.trim()) params.set('query', q.trim());
-        if (kind !== 'all') params.set('kind', kind);
-        const url = `${base}/api/agency/capabilities?${params.toString()}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { capabilities?: CapabilityItem[] };
-        setResults(data.capabilities ?? []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Search failed.');
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const doSearch = useCallback(async (q: string, kind: CapabilityKind | 'all') => {
+    setLoading(true);
+    setError(null);
+    try {
+      const base = buildBaseUrl();
+      const params = new URLSearchParams();
+      if (q.trim()) params.set('query', q.trim());
+      if (kind !== 'all') params.set('kind', kind);
+      const url = `${base}/api/agency/capabilities?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as {
+        mode?: WorkbenchDataMode;
+        capabilities?: CapabilityItem[];
+      };
+      setDataMode(resolveWorkbenchDataMode(data.mode, 'mixed'));
+      setResults(data.capabilities ?? []);
+    } catch (err) {
+      setDataMode('local');
+      setError(err instanceof Error ? err.message : 'Search failed.');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -290,7 +356,6 @@ export function CapabilityDiscoveryBrowser() {
         capabilities: [...existingCapabilities, item.id],
       },
     });
-    setAssignedIds((prev) => new Set(prev).add(item.id));
   };
 
   const filteredResults = results.filter((r) =>
@@ -306,10 +371,11 @@ export function CapabilityDiscoveryBrowser() {
             <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Agency</p>
             <h3 className="text-sm font-semibold theme-text-primary">Capability Browser</h3>
           </div>
+          <DataSourceBadge tone={dataMode} label={capabilityBadgeLabel(dataMode)} />
           <HelpTooltip label="Explain capability discovery browser" side="bottom">
-            Search and browse all discovered tools, skills, extensions, and channels. Click any entry
-            to see its full schema and usage example. Use "Assign to agency" to add it to the active
-            agency's capability set.
+            Search and browse all discovered tools, skills, extensions, and channels. Click any
+            entry to see its full schema and usage example. Use "Assign to agency" to add it to the
+            active agency's capability set.
           </HelpTooltip>
         </div>
         <button
@@ -367,7 +433,8 @@ export function CapabilityDiscoveryBrowser() {
       {/* Active agency badge */}
       {activeAgency && (
         <p className="mb-2 text-[10px] theme-text-muted">
-          Assigning to: <span className="font-semibold theme-text-secondary">{activeAgency.name}</span>
+          Assigning to:{' '}
+          <span className="font-semibold theme-text-secondary">{activeAgency.name}</span>
         </p>
       )}
 
@@ -393,14 +460,18 @@ export function CapabilityDiscoveryBrowser() {
           </div>
         ) : (
           filteredResults.map((item) => (
-            <div
-              key={item.id}
-              className={assignedIds.has(item.id) ? 'opacity-60' : undefined}
-            >
+            <div key={item.id} className={assignedIds.has(item.id) ? 'opacity-60' : undefined}>
               <CapabilityCard
                 item={item}
                 onAssign={handleAssign}
+                onTryIt={(cap) => {
+                  const parsedSchema = cap.schema
+                    ? (() => { try { return JSON.parse(cap.schema) as Record<string, unknown>; } catch { return undefined; } })()
+                    : undefined;
+                  setDryRunTool({ id: cap.id, name: cap.name, schema: parsedSchema });
+                }}
                 agencyId={activeAgencyId}
+                assigned={assignedIds.has(item.id)}
               />
               {assignedIds.has(item.id) && (
                 <p className="mt-0.5 pl-2 text-[9px] text-emerald-400">Assigned to agency</p>
@@ -415,6 +486,16 @@ export function CapabilityDiscoveryBrowser() {
         <p className="mt-2 text-right text-[9px] theme-text-muted">
           {filteredResults.length} capability{filteredResults.length !== 1 ? 's' : ''}
         </p>
+      )}
+
+      {/* Tool dry-run panel */}
+      {dryRunTool && (
+        <ToolDryRun
+          toolId={dryRunTool.id}
+          toolName={dryRunTool.name}
+          inputSchema={dryRunTool.schema}
+          onClose={() => setDryRunTool(null)}
+        />
       )}
     </section>
   );
