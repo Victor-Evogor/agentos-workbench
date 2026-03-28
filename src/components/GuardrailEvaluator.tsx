@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import {
   useGuardrailStore,
-  ALL_PACKS,
   type GuardrailPackId,
   type PackVerdict,
   type EvalLogEntry,

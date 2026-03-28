@@ -20,7 +20,7 @@
  * Falls back to an empty state when the backend route is unavailable.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   ChevronDown,
@@ -163,7 +163,7 @@ function CapabilityCard({ item, onAssign, onTryIt, agencyId, assigned }: Capabil
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {/* Try It button for testing tool execution */}
-          {(item.kind === 'tool' || item.kind === 'skill') && (
+          {item.kind === 'tool' && (
             <button
               type="button"
               onClick={() => onTryIt(item)}
@@ -374,8 +374,8 @@ export function CapabilityDiscoveryBrowser() {
           <DataSourceBadge tone={dataMode} label={capabilityBadgeLabel(dataMode)} />
           <HelpTooltip label="Explain capability discovery browser" side="bottom">
             Search and browse all discovered tools, skills, extensions, and channels. Click any
-            entry to see its full schema and usage example. Use "Assign to agency" to add it to the
-            active agency's capability set.
+            entry to see its full schema and usage example. Use &quot;Assign to agency&quot; to add it to the
+            active agency&apos;s capability set.
           </HelpTooltip>
         </div>
         <button

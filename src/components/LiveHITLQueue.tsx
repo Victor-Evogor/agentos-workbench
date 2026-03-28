@@ -221,7 +221,7 @@ function HistoryRow({ item }: { item: ApprovalHistoryItem }) {
           <span>{new Date(item.decidedAt).toLocaleTimeString()}</span>
         </p>
         {item.modification && (
-          <p className="mt-0.5 text-[10px] theme-text-muted italic">"{item.modification}"</p>
+          <p className="mt-0.5 text-[10px] theme-text-muted italic">&quot;{item.modification}&quot;</p>
         )}
       </div>
     </div>

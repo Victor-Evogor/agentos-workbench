@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import { resolveWorkbenchApiBaseUrl } from '@/lib/agentosClient';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,6 +77,8 @@ interface VoiceCallState {
   activeCallTranscript: CallTranscriptLine[];
   /** ID of the call whose transcript is currently loaded. */
   selectedCallId: string | null;
+  /** Source mode for the displayed call history / transcript payloads. */
+  dataMode: WorkbenchDataMode;
   /** When true, show the barge-in flash indicator. */
   bargeInFlash: boolean;
   /** Text that was interrupted when barge-in occurred. */
@@ -145,14 +148,47 @@ const DEMO_CALLS: VoiceCall[] = [
 ];
 
 const DEMO_TRANSCRIPT: CallTranscriptLine[] = [
-  { speaker: 'Caller', text: 'Hi, I need help resetting my password.', timestamp: new Date(Date.now() - 4 * 60_000).toISOString() },
-  { speaker: 'Agent',  text: 'Sure! I can help you with that. Can you confirm your email address?', timestamp: new Date(Date.now() - 3.8 * 60_000).toISOString() },
-  { speaker: 'Caller', text: 'Yes it\'s user@example.com', timestamp: new Date(Date.now() - 3.5 * 60_000).toISOString() },
-  { speaker: 'Agent',  text: 'Thank you. I\'ll send a reset link to that address now.', timestamp: new Date(Date.now() - 3.2 * 60_000).toISOString() },
-  { speaker: 'Caller', text: 'Oh wait — actually', timestamp: new Date(Date.now() - 3 * 60_000).toISOString(), bargedIn: true },
-  { speaker: 'Agent',  text: 'Go ahead.', timestamp: new Date(Date.now() - 2.9 * 60_000).toISOString() },
-  { speaker: 'Caller', text: 'I think the email might be different. Let me check.', timestamp: new Date(Date.now() - 2.7 * 60_000).toISOString() },
-  { speaker: 'Agent',  text: 'Take your time, I\'m here whenever you\'re ready.', timestamp: new Date(Date.now() - 2.5 * 60_000).toISOString() },
+  {
+    speaker: 'Caller',
+    text: 'Hi, I need help resetting my password.',
+    timestamp: new Date(Date.now() - 4 * 60_000).toISOString(),
+  },
+  {
+    speaker: 'Agent',
+    text: 'Sure! I can help you with that. Can you confirm your email address?',
+    timestamp: new Date(Date.now() - 3.8 * 60_000).toISOString(),
+  },
+  {
+    speaker: 'Caller',
+    text: "Yes it's user@example.com",
+    timestamp: new Date(Date.now() - 3.5 * 60_000).toISOString(),
+  },
+  {
+    speaker: 'Agent',
+    text: "Thank you. I'll send a reset link to that address now.",
+    timestamp: new Date(Date.now() - 3.2 * 60_000).toISOString(),
+  },
+  {
+    speaker: 'Caller',
+    text: 'Oh wait — actually',
+    timestamp: new Date(Date.now() - 3 * 60_000).toISOString(),
+    bargedIn: true,
+  },
+  {
+    speaker: 'Agent',
+    text: 'Go ahead.',
+    timestamp: new Date(Date.now() - 2.9 * 60_000).toISOString(),
+  },
+  {
+    speaker: 'Caller',
+    text: 'I think the email might be different. Let me check.',
+    timestamp: new Date(Date.now() - 2.7 * 60_000).toISOString(),
+  },
+  {
+    speaker: 'Agent',
+    text: "Take your time, I'm here whenever you're ready.",
+    timestamp: new Date(Date.now() - 2.5 * 60_000).toISOString(),
+  },
 ];
 
 const DEFAULT_METRICS: AudioMetrics = {
@@ -165,10 +201,11 @@ const DEFAULT_METRICS: AudioMetrics = {
 // Store
 // ---------------------------------------------------------------------------
 
-export const useVoiceCallStore = create<VoiceCallState>()((set, get) => ({
+export const useVoiceCallStore = create<VoiceCallState>()((set, _get) => ({
   calls: DEMO_CALLS,
   activeCallTranscript: [],
   selectedCallId: null,
+  dataMode: 'demo',
   bargeInFlash: false,
   bargeInText: '',
   audioMetrics: DEFAULT_METRICS,
@@ -182,11 +219,15 @@ export const useVoiceCallStore = create<VoiceCallState>()((set, get) => ({
       const base = resolveWorkbenchApiBaseUrl();
       const res = await fetch(`${base}/api/voice/calls`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { calls: VoiceCall[] };
-      set({ loading: false, calls: data.calls ?? DEMO_CALLS });
+      const data = (await res.json()) as { mode?: WorkbenchDataMode; calls: VoiceCall[] };
+      set({
+        loading: false,
+        calls: data.calls ?? DEMO_CALLS,
+        dataMode: data.mode ?? 'demo',
+      });
     } catch {
       // Fall back to demo data so the panel is always usable offline.
-      set({ loading: false, calls: DEMO_CALLS });
+      set({ loading: false, calls: DEMO_CALLS, dataMode: 'demo' });
     }
   },
 
@@ -196,10 +237,21 @@ export const useVoiceCallStore = create<VoiceCallState>()((set, get) => ({
       const base = resolveWorkbenchApiBaseUrl();
       const res = await fetch(`${base}/api/voice/calls/${callId}/transcript`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { transcript: CallTranscriptLine[] };
-      set({ transcriptLoading: false, activeCallTranscript: data.transcript ?? DEMO_TRANSCRIPT });
+      const data = (await res.json()) as {
+        mode?: WorkbenchDataMode;
+        transcript: CallTranscriptLine[];
+      };
+      set({
+        transcriptLoading: false,
+        activeCallTranscript: data.transcript ?? DEMO_TRANSCRIPT,
+        dataMode: data.mode ?? 'demo',
+      });
     } catch {
-      set({ transcriptLoading: false, activeCallTranscript: DEMO_TRANSCRIPT });
+      set({
+        transcriptLoading: false,
+        activeCallTranscript: DEMO_TRANSCRIPT,
+        dataMode: 'demo',
+      });
     }
   },
 
@@ -208,6 +260,5 @@ export const useVoiceCallStore = create<VoiceCallState>()((set, get) => ({
     setTimeout(() => set({ bargeInFlash: false }), 2000);
   },
 
-  setAudioMetrics: (metrics) =>
-    set((s) => ({ audioMetrics: { ...s.audioMetrics, ...metrics } })),
+  setAudioMetrics: (metrics) => set((s) => ({ audioMetrics: { ...s.audioMetrics, ...metrics } })),
 }));

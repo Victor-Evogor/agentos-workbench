@@ -1,6 +1,6 @@
-import type { AgentOSResponse } from "@/types/agentos";
-import type { PersonaDefinition } from "@/state/sessionStore";
-import type { WorkflowDefinition } from "@/types/workflow";
+import type { AgentOSResponse } from '@/types/agentos';
+import type { PersonaDefinition } from '@/state/sessionStore';
+import type { WorkflowDefinition } from '@/types/workflow';
 
 export interface ExtensionInfo {
   id: string;
@@ -62,7 +62,7 @@ export interface AgentOSModelInfo {
 export interface ExtensionInstallResponse {
   success: boolean;
   installed: boolean;
-  mode: "connected" | "standalone";
+  mode: 'connected' | 'standalone';
   message: string;
 }
 
@@ -90,7 +90,7 @@ export interface RuntimeStatusResponse {
   };
   runtime: {
     connected: boolean;
-    mode: "connected" | "standalone";
+    mode: 'connected' | 'standalone';
     services: {
       conversationManager: boolean;
       extensionManager: boolean;
@@ -151,6 +151,98 @@ export interface RuntimeStatusResponse {
     checkpointResumeUi: boolean;
     note?: string;
   };
+}
+
+export interface RuntimeRagHealthResponse {
+  status: 'ready' | 'disabled' | 'degraded';
+  runtimeConnected: boolean;
+  runtimeReportsRetrieval: boolean;
+  providerAvailable: boolean;
+  defaultProviderId?: string | null;
+  dataSources: string[];
+  vectorStoreConnected: boolean;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+export interface RuntimeRagChunk {
+  chunkId: string;
+  chunkIndex?: number;
+  documentId: string;
+  documentName?: string;
+  content: string;
+  score: number;
+  source?: string;
+  dataSourceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RuntimeRagDocument {
+  id: string;
+  name: string;
+  type: 'markdown' | 'pdf' | 'text' | 'url';
+  chunkCount: number;
+  indexedAt: string;
+  sizeBytes?: number;
+  collectionIds: string[];
+  dataSourceId: string;
+  mode: 'runtime';
+}
+
+export interface RuntimeRagMirrorStatusResponse {
+  success: boolean;
+  documentId: string;
+  mirrored: boolean;
+  checkedAt?: string;
+  sourceLabel?: string | null;
+  document?: RuntimeRagDocument | null;
+}
+
+export interface RuntimeRagDocumentChunk {
+  index: number;
+  text: string;
+  tokenCount: number;
+  overlapTokens: number;
+}
+
+export interface RuntimeRagCollection {
+  id: string;
+  name: string;
+  documentIds: string[];
+  createdAt: string;
+  mode: 'runtime';
+}
+
+export interface RuntimeRagQueryResponse {
+  success: boolean;
+  mode?: 'runtime';
+  query: string;
+  augmentedContext?: string;
+  diagnostics?: Record<string, unknown> | null;
+  auditTrail?: unknown;
+  chunks: RuntimeRagChunk[];
+}
+
+export interface RuntimeRagIngestResponse {
+  success: boolean;
+  mode?: 'runtime';
+  documentId: string;
+  processedCount: number;
+  failedCount: number;
+  ingestedIds: string[];
+  effectiveDataSourceIds: string[];
+  errors?: Array<Record<string, unknown>>;
+  document?: RuntimeRagDocument;
+}
+
+export interface RuntimeRagUrlIngestResponse extends RuntimeRagIngestResponse {
+  fetchedUrl: string;
+  contentType?: string | null;
+}
+
+export interface RuntimeRagFileIngestResponse extends RuntimeRagIngestResponse {
+  parser?: 'pdftotext';
+  extractedCharacters?: number;
 }
 
 export interface GraphRunTaskRecord {
@@ -218,6 +310,7 @@ export interface ConversationSnapshot {
 }
 
 export interface MemoryStatsResponse {
+  mode?: 'runtime' | 'demo';
   connected: boolean;
   episodic: { count: number; newest?: number };
   semantic: { count: number };
@@ -234,6 +327,7 @@ export interface MemoryTimelineEntry {
 }
 
 export interface MemoryTimelineResponse {
+  mode?: 'runtime' | 'demo';
   connected: boolean;
   timeline: MemoryTimelineEntry[];
 }
@@ -248,6 +342,7 @@ export interface MemoryEntryRecord {
 }
 
 export interface MemoryEntriesResponse {
+  mode?: 'runtime' | 'demo';
   connected?: boolean;
   episodic: MemoryEntryRecord[];
   semantic: MemoryEntryRecord[];
@@ -255,6 +350,7 @@ export interface MemoryEntriesResponse {
 }
 
 export interface WorkingMemorySnapshot {
+  mode?: 'runtime' | 'demo';
   connected: boolean;
   tokens: number;
   maxTokens: number;
@@ -271,15 +367,22 @@ export interface WorkingMemorySnapshot {
   transparencyReport?: string;
 }
 
+export interface MemoryDeleteResult {
+  ok: boolean;
+  status: number;
+  mode?: 'runtime' | 'demo';
+  error?: string;
+}
+
 export interface TaskOutcomeWindowEntry {
-  status: "success" | "partial" | "failed";
+  status: 'success' | 'partial' | 'failed';
   score: number;
   timestamp: number;
 }
 
 export interface TaskOutcomeTelemetryWindowSummary {
   scopeKey: string;
-  scopeMode: "global" | "organization" | "organization_persona" | "unknown";
+  scopeMode: 'global' | 'organization' | 'organization_persona' | 'unknown';
   organizationId: string | null;
   personaId: string | null;
   sampleCount: number;
@@ -303,8 +406,8 @@ export interface TaskOutcomeTelemetryResponse {
     totalPages: number;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
-    sortBy: "updated_at" | "weighted_success_rate" | "sample_count" | "scope_key";
-    sortDir: "asc" | "desc";
+    sortBy: 'updated_at' | 'weighted_success_rate' | 'sample_count' | 'scope_key';
+    sortDir: 'asc' | 'desc';
   };
   totals: {
     windowCount: number;
@@ -333,14 +436,14 @@ export interface TaskOutcomeTelemetryResponse {
 export interface TaskOutcomeRuntimeConfigResponse {
   source: string;
   tenantRouting: {
-    mode: "single_tenant" | "multi_tenant";
+    mode: 'single_tenant' | 'multi_tenant';
     defaultOrganizationId?: string;
     strictOrganizationIsolation: boolean;
   };
   taskOutcomeTelemetry: {
     enabled: boolean;
     rollingWindowSize: number;
-    scope: "global" | "organization" | "organization_persona";
+    scope: 'global' | 'organization' | 'organization_persona';
     emitAlerts: boolean;
     alertBelowWeightedSuccessRate: number;
     alertMinSamples: number;
@@ -355,12 +458,12 @@ export interface TaskOutcomeRuntimeConfigResponse {
   };
   turnPlanning: {
     enabled?: boolean;
-    defaultToolFailureMode?: "fail_open" | "fail_closed";
+    defaultToolFailureMode?: 'fail_open' | 'fail_closed';
     allowRequestOverrides?: boolean;
     discovery?: {
       enabled?: boolean;
-      defaultToolSelectionMode?: "all" | "discovered";
-      recallProfile?: "aggressive" | "balanced" | "precision";
+      defaultToolSelectionMode?: 'all' | 'discovered';
+      recallProfile?: 'aggressive' | 'balanced' | 'precision';
       onlyAvailable?: boolean;
       includePromptContext?: boolean;
       maxRetries?: number;
@@ -372,7 +475,7 @@ export interface TaskOutcomeRuntimeConfigResponse {
 export interface TaskOutcomeAlertHistoryItem {
   alertId: string;
   scopeKey: string;
-  scopeMode: "global" | "organization" | "organization_persona" | "unknown";
+  scopeMode: 'global' | 'organization' | 'organization_persona' | 'unknown';
   organizationId: string | null;
   personaId: string | null;
   severity: string;
@@ -399,8 +502,8 @@ export interface TaskOutcomeAlertHistoryResponse {
     totalPages: number;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
-    sortBy: "alert_timestamp" | "created_at" | "severity" | "scope_key";
-    sortDir: "asc" | "desc";
+    sortBy: 'alert_timestamp' | 'created_at' | 'severity' | 'scope_key';
+    sortDir: 'asc' | 'desc';
   };
   totals: {
     alertCount: number;
@@ -477,9 +580,9 @@ type StreamOptions = {
 function isAbortError(error: unknown): boolean {
   return Boolean(
     error &&
-    typeof error === "object" &&
-    "name" in error &&
-    (error as { name?: string }).name === "AbortError"
+      typeof error === 'object' &&
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError'
   );
 }
 
@@ -491,7 +594,15 @@ export type ListPersonaFilters = {
 };
 
 export function resolveWorkbenchApiBaseUrl(): string {
-  const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
+  const env = (
+    import.meta as ImportMeta & {
+      env?: {
+        VITE_API_URL?: string;
+        VITE_BACKEND_PORT?: string;
+      };
+    }
+  ).env;
+  const configuredBaseUrl = env?.VITE_API_URL?.trim();
   if (configuredBaseUrl) {
     return configuredBaseUrl.replace(/\/+$/, '');
   }
@@ -500,7 +611,7 @@ export function resolveWorkbenchApiBaseUrl(): string {
     return window.location.origin.replace(/\/+$/, '');
   }
 
-  const fallbackPort = import.meta.env.VITE_BACKEND_PORT?.trim() || '3001';
+  const fallbackPort = env?.VITE_BACKEND_PORT?.trim() || '3001';
   return `http://localhost:${fallbackPort}`;
 }
 
@@ -519,15 +630,15 @@ class AgentOSClient {
 
   // ... existing methods ...
 
-	/**
-	 * Send a single-turn chat message (non-streaming) to the AgentOS backend.
-	 * @param personaId Persona or mode identifier.
-	 * @param message User input string.
-	 * @param sessionId Optional conversation/session id (auto-generated if omitted).
-	 * @param includeTools Whether to enable tool execution (backend-dependent).
-	 * @param includeGuardrails Whether to enable guardrails (backend-dependent).
-	 * @returns Raw fetch Response for callers that need headers/status.
-	 */
+  /**
+   * Send a single-turn chat message (non-streaming) to the AgentOS backend.
+   * @param personaId Persona or mode identifier.
+   * @param message User input string.
+   * @param sessionId Optional conversation/session id (auto-generated if omitted).
+   * @param includeTools Whether to enable tool execution (backend-dependent).
+   * @param includeGuardrails Whether to enable guardrails (backend-dependent).
+   * @returns Raw fetch Response for callers that need headers/status.
+   */
   async sendMessage(
     personaId: string,
     message: string,
@@ -546,7 +657,7 @@ class AgentOSClient {
         input: message,
         conversationId: sessionId || `session_${Date.now()}`,
         includeTools,
-        includeGuardrails
+        includeGuardrails,
       }),
     });
 
@@ -557,17 +668,17 @@ class AgentOSClient {
     return response;
   }
 
-	/**
-	 * Open a Server-Sent Events (SSE) stream for a single user message.
-	 * Parses SSE lines into {@link AgentOSResponse} chunks and forwards them to handlers.
-	 * @param personaId Selected persona/mode id used by the backend stream router.
-	 * @param message User input string to send.
-	 * @param sessionId Optional conversation id to correlate turns.
-	 * @param onChunk Handler for parsed AgentOS chunks.
-	 * @param onComplete Called when the stream ends.
-	 * @param onError Called on network or parsing errors.
-	 * @param opts Optional model, workflowRequest, and agencyRequest.
-	 */
+  /**
+   * Open a Server-Sent Events (SSE) stream for a single user message.
+   * Parses SSE lines into {@link AgentOSResponse} chunks and forwards them to handlers.
+   * @param personaId Selected persona/mode id used by the backend stream router.
+   * @param message User input string to send.
+   * @param sessionId Optional conversation id to correlate turns.
+   * @param onChunk Handler for parsed AgentOS chunks.
+   * @param onComplete Called when the stream ends.
+   * @param onError Called on network or parsing errors.
+   * @param opts Optional model, workflowRequest, and agencyRequest.
+   */
   async streamMessage(
     personaId: string,
     message: string,
@@ -586,12 +697,13 @@ class AgentOSClient {
         messages: JSON.stringify([{ role: 'user', content: message }]),
       });
       if (opts?.model) params.set('model', opts.model);
-      if (opts?.workflowRequest) params.set('workflowRequest', JSON.stringify(opts.workflowRequest));
+      if (opts?.workflowRequest)
+        params.set('workflowRequest', JSON.stringify(opts.workflowRequest));
       if (opts?.agencyRequest) params.set('agencyRequest', JSON.stringify(opts.agencyRequest));
       const url = `${this.baseUrl}/api/agentos/stream?${params.toString()}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Accept': 'text/event-stream' },
+        headers: { Accept: 'text/event-stream' },
         signal: opts?.signal,
       });
 
@@ -635,7 +747,7 @@ class AgentOSClient {
             return;
           } else if (line.startsWith('event: error')) {
             // Find the next data line for error details
-            const errorLine = lines.find(l => l.startsWith('data: '));
+            const errorLine = lines.find((l) => l.startsWith('data: '));
             if (errorLine) {
               try {
                 const errorData = JSON.parse(errorLine.slice(6));
@@ -657,11 +769,15 @@ class AgentOSClient {
     }
   }
 
-	/**
-	 * Fetch personas available to the workbench, optionally filtered server-side.
-	 * @returns Array of {@link PersonaDefinition}.
-	 */
-  async listPersonas(params?: { userId?: string; filters?: ListPersonaFilters; signal?: AbortSignal }): Promise<PersonaDefinition[]> {
+  /**
+   * Fetch personas available to the workbench, optionally filtered server-side.
+   * @returns Array of {@link PersonaDefinition}.
+   */
+  async listPersonas(params?: {
+    userId?: string;
+    filters?: ListPersonaFilters;
+    signal?: AbortSignal;
+  }): Promise<PersonaDefinition[]> {
     const search = new URLSearchParams();
     const userId = params?.userId ?? 'agentos-workbench-user';
     search.set('userId', userId);
@@ -679,7 +795,9 @@ class AgentOSClient {
     }
     let response: Response;
     try {
-      response = await fetch(`${this.baseUrl}/api/agentos/personas?${search.toString()}`, { signal: params?.signal });
+      response = await fetch(`${this.baseUrl}/api/agentos/personas?${search.toString()}`, {
+        signal: params?.signal,
+      });
     } catch (error) {
       if (isAbortError(error)) {
         throw error;
@@ -696,13 +814,13 @@ class AgentOSClient {
     }
     const data = await response.json();
     // Handle both array response and object with personas field
-    return (Array.isArray(data) ? data : (data.personas || [])) as PersonaDefinition[];
+    return (Array.isArray(data) ? data : data.personas || []) as PersonaDefinition[];
   }
 
-	/**
-	 * Fetch workflow definitions from the backend.
-	 * @returns Array of {@link WorkflowDefinition}.
-	 */
+  /**
+   * Fetch workflow definitions from the backend.
+   * @returns Array of {@link WorkflowDefinition}.
+   */
   async listWorkflows(): Promise<WorkflowDefinition[]> {
     const response = await fetch(`${this.baseUrl}/api/agentos/workflows/definitions`);
     if (!response.ok) {
@@ -710,7 +828,7 @@ class AgentOSClient {
     }
     const data = await response.json();
     // Handle both array response and object with definitions field
-    return (Array.isArray(data) ? data : (data.definitions || [])) as WorkflowDefinition[];
+    return (Array.isArray(data) ? data : data.definitions || []) as WorkflowDefinition[];
   }
 
   // Alias for backwards compatibility
@@ -718,15 +836,12 @@ class AgentOSClient {
     return this.listWorkflows();
   }
 
-	/**
-	 * Execute an agency by id with arbitrary input (non-streaming).
-	 * @param agencyId Target agency id.
-	 * @param input Arbitrary JSON input payload.
-	 */
-  async executeAgency(
-    agencyId: string,
-    input: unknown
-  ): Promise<Response> {
+  /**
+   * Execute an agency by id with arbitrary input (non-streaming).
+   * @param agencyId Target agency id.
+   * @param input Arbitrary JSON input payload.
+   */
+  async executeAgency(agencyId: string, input: unknown): Promise<Response> {
     const response = await fetch(`${this.baseUrl}/api/agentos/agency/execute`, {
       method: 'POST',
       headers: {
@@ -735,7 +850,7 @@ class AgentOSClient {
       body: JSON.stringify({
         agencyId,
         input,
-        userId: 'agentos-workbench-user'
+        userId: 'agentos-workbench-user',
       }),
     });
 
@@ -748,7 +863,7 @@ class AgentOSClient {
 
   // New Extension Methods
 
-	/** List extensions from backend registry. */
+  /** List extensions from backend registry. */
   async getExtensions(): Promise<ExtensionInfo[]> {
     const response = await fetch(`${this.baseUrl}/api/agentos/extensions`);
     if (!response.ok) {
@@ -759,7 +874,7 @@ class AgentOSClient {
     return Array.isArray(data) ? data : [];
   }
 
-	/** List tools derived from installed/available extensions. */
+  /** List tools derived from installed/available extensions. */
   async getAvailableTools(): Promise<ExtensionToolInfo[]> {
     const response = await fetch(`${this.baseUrl}/api/agentos/extensions/tools`);
     if (!response.ok) {
@@ -770,10 +885,10 @@ class AgentOSClient {
     return Array.isArray(data) ? data : [];
   }
 
-	/**
-	 * Request extension installation by package name.
-	 * Note: server currently invalidates cache only (placeholder).
-	 */
+  /**
+   * Request extension installation by package name.
+   * Note: server currently invalidates cache only (placeholder).
+   */
   async installExtension(packageName: string): Promise<ExtensionInstallResponse> {
     const response = await fetch(`${this.baseUrl}/api/agentos/extensions/install`, {
       method: 'POST',
@@ -790,10 +905,10 @@ class AgentOSClient {
     return response.json() as Promise<ExtensionInstallResponse>;
   }
 
-	/**
-	 * Execute a tool by id with arbitrary input.
-	 * Returns tool-specific output object.
-	 */
+  /**
+   * Execute a tool by id with arbitrary input.
+   * Returns tool-specific output object.
+   */
   async executeTool(toolId: string, input: unknown): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/api/agentos/tools/execute`, {
       method: 'POST',
@@ -803,7 +918,7 @@ class AgentOSClient {
       body: JSON.stringify({
         toolId,
         input,
-        userId: 'agentos-workbench-user'
+        userId: 'agentos-workbench-user',
       }),
     });
 
@@ -814,7 +929,7 @@ class AgentOSClient {
     return response.json();
   }
 
-	/** Start an example agency workflow and return an execution id for the demo stream. */
+  /** Start an example agency workflow and return an execution id for the demo stream. */
   async startAgencyWorkflow(input: unknown): Promise<{
     status: string;
     executionId: string;
@@ -829,7 +944,7 @@ class AgentOSClient {
       body: JSON.stringify({
         workflowId: 'local.research-and-publish',
         input,
-        userId: 'agentos-workbench-user'
+        userId: 'agentos-workbench-user',
       }),
     });
 
@@ -846,14 +961,14 @@ class AgentOSClient {
   }
 
   // Diagnostics
-	/** Get backend LLM provider status snapshot. */
+  /** Get backend LLM provider status snapshot. */
   async getLlmStatus(): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/api/system/llm-status`);
     if (!response.ok) throw new Error('Failed to fetch LLM status');
     return response.json();
   }
 
-	/** List available models with pricing metadata (if configured). */
+  /** List available models with pricing metadata (if configured). */
   async getAvailableModels(): Promise<AgentOSModelInfo[]> {
     const response = await fetch(`${this.baseUrl}/api/agentos/models`);
     if (!response.ok) throw new Error('Failed to fetch models');
@@ -863,46 +978,46 @@ class AgentOSClient {
   }
 
   async getTaskOutcomeTelemetry(params?: {
-    scopeMode?: "global" | "organization" | "organization_persona";
+    scopeMode?: 'global' | 'organization' | 'organization_persona';
     organizationId?: string;
     personaId?: string;
     scopeContains?: string;
     limit?: number;
     page?: number;
-    sortBy?: "updated_at" | "weighted_success_rate" | "sample_count" | "scope_key";
-    sortDir?: "asc" | "desc";
+    sortBy?: 'updated_at' | 'weighted_success_rate' | 'sample_count' | 'scope_key';
+    sortDir?: 'asc' | 'desc';
     includeEntries?: boolean;
   }): Promise<TaskOutcomeTelemetryResponse> {
     const search = new URLSearchParams();
-    if (params?.scopeMode) search.set("scopeMode", params.scopeMode);
-    if (params?.organizationId) search.set("organizationId", params.organizationId);
-    if (params?.personaId) search.set("personaId", params.personaId);
-    if (params?.scopeContains) search.set("scopeContains", params.scopeContains);
-    if (typeof params?.limit === "number" && Number.isFinite(params.limit)) {
-      search.set("limit", String(Math.trunc(params.limit)));
+    if (params?.scopeMode) search.set('scopeMode', params.scopeMode);
+    if (params?.organizationId) search.set('organizationId', params.organizationId);
+    if (params?.personaId) search.set('personaId', params.personaId);
+    if (params?.scopeContains) search.set('scopeContains', params.scopeContains);
+    if (typeof params?.limit === 'number' && Number.isFinite(params.limit)) {
+      search.set('limit', String(Math.trunc(params.limit)));
     }
-    if (typeof params?.page === "number" && Number.isFinite(params.page)) {
-      search.set("page", String(Math.trunc(params.page)));
+    if (typeof params?.page === 'number' && Number.isFinite(params.page)) {
+      search.set('page', String(Math.trunc(params.page)));
     }
-    if (params?.sortBy) search.set("sortBy", params.sortBy);
-    if (params?.sortDir) search.set("sortDir", params.sortDir);
-    if (typeof params?.includeEntries === "boolean") {
-      search.set("includeEntries", params.includeEntries ? "true" : "false");
+    if (params?.sortBy) search.set('sortBy', params.sortBy);
+    if (params?.sortDir) search.set('sortDir', params.sortDir);
+    if (typeof params?.includeEntries === 'boolean') {
+      search.set('includeEntries', params.includeEntries ? 'true' : 'false');
     }
-    const suffix = search.toString().length > 0 ? `?${search.toString()}` : "";
+    const suffix = search.toString().length > 0 ? `?${search.toString()}` : '';
     const response = await fetch(`${this.baseUrl}/api/agentos/telemetry/task-outcomes${suffix}`);
-    if (!response.ok) throw new Error("Failed to fetch task outcome telemetry");
+    if (!response.ok) throw new Error('Failed to fetch task outcome telemetry');
     return (await response.json()) as TaskOutcomeTelemetryResponse;
   }
 
   async getTaskOutcomeTelemetryConfig(): Promise<TaskOutcomeRuntimeConfigResponse> {
     const response = await fetch(`${this.baseUrl}/api/agentos/telemetry/config`);
-    if (!response.ok) throw new Error("Failed to fetch task outcome telemetry config");
+    if (!response.ok) throw new Error('Failed to fetch task outcome telemetry config');
     return (await response.json()) as TaskOutcomeRuntimeConfigResponse;
   }
 
   async getTaskOutcomeAlertHistory(params?: {
-    scopeMode?: "global" | "organization" | "organization_persona";
+    scopeMode?: 'global' | 'organization' | 'organization_persona';
     organizationId?: string;
     personaId?: string;
     scopeContains?: string;
@@ -910,29 +1025,29 @@ class AgentOSClient {
     acknowledged?: boolean;
     limit?: number;
     page?: number;
-    sortBy?: "alert_timestamp" | "created_at" | "severity" | "scope_key";
-    sortDir?: "asc" | "desc";
+    sortBy?: 'alert_timestamp' | 'created_at' | 'severity' | 'scope_key';
+    sortDir?: 'asc' | 'desc';
   }): Promise<TaskOutcomeAlertHistoryResponse> {
     const search = new URLSearchParams();
-    if (params?.scopeMode) search.set("scopeMode", params.scopeMode);
-    if (params?.organizationId) search.set("organizationId", params.organizationId);
-    if (params?.personaId) search.set("personaId", params.personaId);
-    if (params?.scopeContains) search.set("scopeContains", params.scopeContains);
-    if (params?.severity) search.set("severity", params.severity);
-    if (typeof params?.acknowledged === "boolean") {
-      search.set("acknowledged", params.acknowledged ? "true" : "false");
+    if (params?.scopeMode) search.set('scopeMode', params.scopeMode);
+    if (params?.organizationId) search.set('organizationId', params.organizationId);
+    if (params?.personaId) search.set('personaId', params.personaId);
+    if (params?.scopeContains) search.set('scopeContains', params.scopeContains);
+    if (params?.severity) search.set('severity', params.severity);
+    if (typeof params?.acknowledged === 'boolean') {
+      search.set('acknowledged', params.acknowledged ? 'true' : 'false');
     }
-    if (typeof params?.limit === "number" && Number.isFinite(params.limit)) {
-      search.set("limit", String(Math.trunc(params.limit)));
+    if (typeof params?.limit === 'number' && Number.isFinite(params.limit)) {
+      search.set('limit', String(Math.trunc(params.limit)));
     }
-    if (typeof params?.page === "number" && Number.isFinite(params.page)) {
-      search.set("page", String(Math.trunc(params.page)));
+    if (typeof params?.page === 'number' && Number.isFinite(params.page)) {
+      search.set('page', String(Math.trunc(params.page)));
     }
-    if (params?.sortBy) search.set("sortBy", params.sortBy);
-    if (params?.sortDir) search.set("sortDir", params.sortDir);
-    const suffix = search.toString().length > 0 ? `?${search.toString()}` : "";
+    if (params?.sortBy) search.set('sortBy', params.sortBy);
+    if (params?.sortDir) search.set('sortDir', params.sortDir);
+    const suffix = search.toString().length > 0 ? `?${search.toString()}` : '';
     const response = await fetch(`${this.baseUrl}/api/agentos/telemetry/alerts${suffix}`);
-    if (!response.ok) throw new Error("Failed to fetch task outcome alert history");
+    if (!response.ok) throw new Error('Failed to fetch task outcome alert history');
     return (await response.json()) as TaskOutcomeAlertHistoryResponse;
   }
 
@@ -943,23 +1058,23 @@ class AgentOSClient {
     const response = await fetch(
       `${this.baseUrl}/api/agentos/telemetry/alerts/${encodeURIComponent(alertId)}/acknowledge`,
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           acknowledged,
-          userId: "agentos-workbench-user",
+          userId: 'agentos-workbench-user',
         }),
       }
     );
-    if (!response.ok) throw new Error("Failed to update task outcome alert acknowledgement");
+    if (!response.ok) throw new Error('Failed to update task outcome alert acknowledgement');
     return (await response.json()) as { alert: TaskOutcomeAlertHistoryItem };
   }
 
   async getTaskOutcomeAlertRetentionStatus(): Promise<TaskOutcomeAlertRetentionStatus> {
     const response = await fetch(`${this.baseUrl}/api/agentos/telemetry/alerts/retention`);
-    if (!response.ok) throw new Error("Failed to fetch task outcome alert retention status");
+    if (!response.ok) throw new Error('Failed to fetch task outcome alert retention status');
     return (await response.json()) as TaskOutcomeAlertRetentionStatus;
   }
 
@@ -968,15 +1083,18 @@ class AgentOSClient {
     retentionDays?: number;
     maxRows?: number;
     pruneIntervalMs?: number;
-  }): Promise<{ summary: TaskOutcomeAlertRetentionSummary; status: TaskOutcomeAlertRetentionStatus }> {
+  }): Promise<{
+    summary: TaskOutcomeAlertRetentionSummary;
+    status: TaskOutcomeAlertRetentionStatus;
+  }> {
     const response = await fetch(`${this.baseUrl}/api/agentos/telemetry/alerts/prune`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(options ?? {}),
     });
-    if (!response.ok) throw new Error("Failed to prune task outcome alert history");
+    if (!response.ok) throw new Error('Failed to prune task outcome alert history');
     return (await response.json()) as {
       summary: TaskOutcomeAlertRetentionSummary;
       status: TaskOutcomeAlertRetentionStatus;
@@ -984,10 +1102,10 @@ class AgentOSClient {
   }
 
   // Open a streaming connection to AgentOS
-	/**
-	 * Open an AgentOS stream and return a cleanup function.
-	 * Wraps {@link streamMessage} and allows cancellation in the future.
-	 */
+  /**
+   * Open an AgentOS stream and return a cleanup function.
+   * Wraps {@link streamMessage} and allows cancellation in the future.
+   */
   openAgentOSStream(
     params: {
       sessionId: string;
@@ -1030,12 +1148,12 @@ class AgentOSClient {
   // If WebSocket support is needed in the future, add socket.io-client back
   // and use dynamic imports to avoid Node.js module issues
 
-	/** Fetch current guardrail tier and registry-backed pack metadata. */
-	async getGuardrails(): Promise<GuardrailConfigResponse> {
-		const response = await fetch(`${this.baseUrl}/api/agentos/guardrails`);
-		if (!response.ok) throw new Error('Failed to fetch guardrails');
-		return response.json() as Promise<GuardrailConfigResponse>;
-	}
+  /** Fetch current guardrail tier and registry-backed pack metadata. */
+  async getGuardrails(): Promise<GuardrailConfigResponse> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/guardrails`);
+    if (!response.ok) throw new Error('Failed to fetch guardrails');
+    return response.json() as Promise<GuardrailConfigResponse>;
+  }
 
   async configureGuardrails(config: {
     tier?: GuardrailTier;
@@ -1054,7 +1172,10 @@ class AgentOSClient {
     }
   }
 
-  async getConversationHistory(conversationId: string, userId = 'agentos-workbench-user'): Promise<ConversationHistoryResponse> {
+  async getConversationHistory(
+    conversationId: string,
+    userId = 'agentos-workbench-user'
+  ): Promise<ConversationHistoryResponse> {
     const params = new URLSearchParams({ userId });
     const response = await fetch(
       `${this.baseUrl}/api/agentos/conversations/${encodeURIComponent(conversationId)}?${params.toString()}`
@@ -1073,6 +1194,216 @@ class AgentOSClient {
     return response.json() as Promise<RuntimeStatusResponse>;
   }
 
+  async getRuntimeRagHealth(): Promise<RuntimeRagHealthResponse> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/health`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch runtime RAG health');
+    }
+    return response.json() as Promise<RuntimeRagHealthResponse>;
+  }
+
+  async listRuntimeRagDocuments(): Promise<RuntimeRagDocument[]> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/documents`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch runtime RAG documents');
+    }
+    const data = (await response.json()) as { documents?: RuntimeRagDocument[] };
+    return data.documents ?? [];
+  }
+
+  async getRuntimeRagDocumentChunks(documentId: string): Promise<RuntimeRagDocumentChunk[]> {
+    const response = await fetch(
+      `${this.baseUrl}/api/agentos/rag/documents/${encodeURIComponent(documentId)}/chunks`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch runtime RAG document chunks');
+    }
+    const data = (await response.json()) as { chunks?: RuntimeRagDocumentChunk[] };
+    return data.chunks ?? [];
+  }
+
+  async getRuntimeRagDocumentMirrorStatus(
+    documentId: string
+  ): Promise<RuntimeRagMirrorStatusResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/api/agentos/rag/documents/${encodeURIComponent(documentId)}/mirror-status`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch runtime RAG document mirror status');
+    }
+    return response.json() as Promise<RuntimeRagMirrorStatusResponse>;
+  }
+
+  async deleteRuntimeRagDocument(documentId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/agentos/rag/documents/${encodeURIComponent(documentId)}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to delete runtime RAG document');
+    }
+  }
+
+  async listRuntimeRagCollections(): Promise<RuntimeRagCollection[]> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/collections`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch runtime RAG collections');
+    }
+    const data = (await response.json()) as { collections?: RuntimeRagCollection[] };
+    return data.collections ?? [];
+  }
+
+  async createRuntimeRagCollection(name: string): Promise<RuntimeRagCollection> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/collections`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to create runtime RAG collection');
+    }
+    const data = (await response.json()) as { collection: RuntimeRagCollection };
+    return data.collection;
+  }
+
+  async deleteRuntimeRagCollection(collectionId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/agentos/rag/collections/${encodeURIComponent(collectionId)}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to delete runtime RAG collection');
+    }
+  }
+
+  async assignRuntimeRagDocumentToCollection(
+    documentId: string,
+    collectionId: string
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/agentos/rag/collections/${encodeURIComponent(collectionId)}/documents`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documentId }),
+      }
+    );
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to assign runtime RAG document to collection');
+    }
+  }
+
+  async queryRuntimeRag(input: {
+    query: string;
+    topK?: number;
+    strategy?: 'similarity' | 'mmr' | 'hybrid';
+    targetDataSourceIds?: string[];
+    collectionId?: string;
+    includeAudit?: boolean;
+    rerank?: boolean;
+  }): Promise<RuntimeRagQueryResponse> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to query runtime RAG');
+    }
+
+    return response.json() as Promise<RuntimeRagQueryResponse>;
+  }
+
+  async ingestRuntimeRag(input: {
+    content: string;
+    documentId?: string;
+    title?: string;
+    source?: string;
+    dataSourceId?: string;
+    collectionId?: string;
+    metadata?: Record<string, string | number | boolean | string[] | number[]>;
+  }): Promise<RuntimeRagIngestResponse> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/ingest`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to ingest runtime RAG content');
+    }
+
+    return response.json() as Promise<RuntimeRagIngestResponse>;
+  }
+
+  async ingestRuntimeRagUrl(input: {
+    url: string;
+    title?: string;
+    dataSourceId?: string;
+    collectionId?: string;
+  }): Promise<RuntimeRagUrlIngestResponse> {
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/ingest-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to ingest runtime RAG URL');
+    }
+
+    return response.json() as Promise<RuntimeRagUrlIngestResponse>;
+  }
+
+  async ingestRuntimeRagFile(input: {
+    file: File;
+    dataSourceId?: string;
+    collectionId?: string;
+  }): Promise<RuntimeRagFileIngestResponse> {
+    const formData = new FormData();
+    formData.append('file', input.file, input.file.name);
+    if (input.dataSourceId) {
+      formData.append('dataSourceId', input.dataSourceId);
+    }
+    if (input.collectionId) {
+      formData.append('collectionId', input.collectionId);
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/agentos/rag/ingest-file`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(error?.message || 'Failed to ingest runtime RAG file');
+    }
+
+    return response.json() as Promise<RuntimeRagFileIngestResponse>;
+  }
+
   async listGraphRuns(): Promise<GraphRunRecord[]> {
     const response = await fetch(`${this.baseUrl}/api/agentos/graph-runs`);
     if (!response.ok) {
@@ -1082,7 +1413,9 @@ class AgentOSClient {
   }
 
   async getGraphRun(runId: string): Promise<GraphRunRecord> {
-    const response = await fetch(`${this.baseUrl}/api/agentos/graph-runs/${encodeURIComponent(runId)}`);
+    const response = await fetch(
+      `${this.baseUrl}/api/agentos/graph-runs/${encodeURIComponent(runId)}`
+    );
     if (!response.ok) {
       throw new Error('Failed to fetch graph run');
     }
@@ -1102,7 +1435,10 @@ class AgentOSClient {
     return response.json() as Promise<GraphRunRecord>;
   }
 
-  async forkGraphRunCheckpoint(runId: string, checkpointId: string): Promise<Record<string, unknown>> {
+  async forkGraphRunCheckpoint(
+    runId: string,
+    checkpointId: string
+  ): Promise<Record<string, unknown>> {
     const response = await fetch(
       `${this.baseUrl}/api/agentos/graph-runs/${encodeURIComponent(runId)}/checkpoints/${encodeURIComponent(checkpointId)}/fork`,
       {
@@ -1137,6 +1473,7 @@ export const getGuardrails = agentosClient.getGuardrails.bind(agentosClient);
 export const configureGuardrails = agentosClient.configureGuardrails.bind(agentosClient);
 export const getConversationHistory = agentosClient.getConversationHistory.bind(agentosClient);
 export const getRuntimeStatus = agentosClient.getRuntimeStatus.bind(agentosClient);
+export const getRuntimeRagHealth = agentosClient.getRuntimeRagHealth.bind(agentosClient);
 export const startAgencyWorkflow = agentosClient.startAgencyWorkflow.bind(agentosClient);
 export const getLlmStatus = agentosClient.getLlmStatus.bind(agentosClient);
 export const getAvailableModels = agentosClient.getAvailableModels.bind(agentosClient);
@@ -1155,13 +1492,13 @@ export const pruneTaskOutcomeAlertHistory =
 export type GuardrailTier = 'dangerous' | 'permissive' | 'balanced' | 'strict' | 'paranoid';
 
 export interface GuardrailDescriptor {
-	id: string;
-	package: string;
-	name: string;
-	description: string;
-	installed: boolean;
-	enabled: boolean;
-	verified?: boolean;
+  id: string;
+  package: string;
+  name: string;
+  description: string;
+  installed: boolean;
+  enabled: boolean;
+  verified?: boolean;
 }
 
 export interface GuardrailConfigResponse {
@@ -1217,47 +1554,45 @@ export interface AgencySeatRecord {
 }
 
 function asObj(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
+  return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
 }
 
-function asString(value: unknown, fallback = ""): string {
-  return typeof value === "string" ? value : fallback;
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
 }
 
 function asNum(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
   return undefined;
 }
 
 function normalizeAgencyExecutionRecord(raw: unknown): AgencyExecutionRecord {
   const obj = asObj(raw);
-  const startedAt =
-    asNum(obj.startedAt) ??
-    asNum(obj.started_at) ??
-    Date.now();
+  const startedAt = asNum(obj.startedAt) ?? asNum(obj.started_at) ?? Date.now();
   const createdAtRaw = asString(obj.createdAt) || asString(obj.created_at);
-  const createdAt =
-    createdAtRaw ||
-    new Date(startedAt).toISOString();
+  const createdAt = createdAtRaw || new Date(startedAt).toISOString();
   const updatedAtRaw = asString(obj.updatedAt) || asString(obj.updated_at);
 
   return {
     agencyId: asString(obj.agencyId) || asString(obj.agency_id),
-    workflowDefinitionId: asString(obj.workflowDefinitionId) || asString(obj.workflow_definition_id) || undefined,
+    workflowDefinitionId:
+      asString(obj.workflowDefinitionId) || asString(obj.workflow_definition_id) || undefined,
     userId: asString(obj.userId) || asString(obj.user_id),
     conversationId: asString(obj.conversationId) || asString(obj.conversation_id) || undefined,
     goal: asString(obj.goal) || undefined,
-    status: asString(obj.status, "pending"),
+    status: asString(obj.status, 'pending'),
     startedAt,
     completedAt: asNum(obj.completedAt) ?? asNum(obj.completed_at),
     durationMs: asNum(obj.durationMs) ?? asNum(obj.duration_ms),
     totalCostUsd: asNum(obj.totalCostUsd) ?? asNum(obj.total_cost_usd),
     totalTokens: asNum(obj.totalTokens) ?? asNum(obj.total_tokens),
     outputFormat: asString(obj.outputFormat) || asString(obj.output_format) || undefined,
-    consolidatedOutput: asString(obj.consolidatedOutput) || asString(obj.consolidated_output) || undefined,
-    emergentMetadata: asString(obj.emergentMetadata) || asString(obj.emergent_metadata) || undefined,
+    consolidatedOutput:
+      asString(obj.consolidatedOutput) || asString(obj.consolidated_output) || undefined,
+    emergentMetadata:
+      asString(obj.emergentMetadata) || asString(obj.emergent_metadata) || undefined,
     error: asString(obj.error) || undefined,
     createdAt,
     updatedAt: updatedAtRaw || undefined,
@@ -1268,17 +1603,17 @@ function normalizeAgencyExecutionRecord(raw: unknown): AgencyExecutionRecord {
 function normalizeAgencySeatRecord(raw: unknown): AgencySeatRecord {
   const obj = asObj(raw);
   let metadata: Record<string, unknown> | string | undefined;
-  if (typeof obj.metadata === "string") {
+  if (typeof obj.metadata === 'string') {
     metadata = obj.metadata;
     try {
       const parsed = JSON.parse(obj.metadata);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         metadata = parsed as Record<string, unknown>;
       }
     } catch {
       // Keep raw string metadata when JSON parsing fails.
     }
-  } else if (obj.metadata && typeof obj.metadata === "object" && !Array.isArray(obj.metadata)) {
+  } else if (obj.metadata && typeof obj.metadata === 'object' && !Array.isArray(obj.metadata)) {
     metadata = obj.metadata as Record<string, unknown>;
   }
 
@@ -1288,7 +1623,7 @@ function normalizeAgencySeatRecord(raw: unknown): AgencySeatRecord {
     roleId: asString(obj.roleId) || asString(obj.role_id),
     personaId: asString(obj.personaId) || asString(obj.persona_id),
     gmiInstanceId: asString(obj.gmiInstanceId) || asString(obj.gmi_instance_id) || undefined,
-    status: asString(obj.status, "pending"),
+    status: asString(obj.status, 'pending'),
     startedAt: asNum(obj.startedAt) ?? asNum(obj.started_at),
     completedAt: asNum(obj.completedAt) ?? asNum(obj.completed_at),
     output: asString(obj.output) || undefined,
@@ -1303,7 +1638,10 @@ function normalizeAgencySeatRecord(raw: unknown): AgencySeatRecord {
 /**
  * List agency executions for a user
  */
-export async function listAgencyExecutions(userId: string, limit?: number): Promise<AgencyExecutionRecord[]> {
+export async function listAgencyExecutions(
+  userId: string,
+  limit?: number
+): Promise<AgencyExecutionRecord[]> {
   const baseUrl = resolveWorkbenchApiBaseUrl();
   const params = new URLSearchParams({ userId });
   if (limit) {
@@ -1322,7 +1660,9 @@ export async function listAgencyExecutions(userId: string, limit?: number): Prom
 /**
  * Get a specific agency execution with all seats
  */
-export async function getAgencyExecution(agencyId: string): Promise<{ execution: AgencyExecutionRecord; seats: AgencySeatRecord[] } | null> {
+export async function getAgencyExecution(
+  agencyId: string
+): Promise<{ execution: AgencyExecutionRecord; seats: AgencySeatRecord[] } | null> {
   const baseUrl = resolveWorkbenchApiBaseUrl();
   const response = await fetch(`${baseUrl}/api/agentos/agency/executions/${agencyId}`);
   if (!response.ok) {
@@ -1485,7 +1825,9 @@ export async function getMemoryTimeline(since?: number): Promise<MemoryTimelineR
  * @returns Category array, working-memory object, or full store object.
  *          Returns an empty fallback (`[]` or `{}`) on error.
  */
-export async function getMemoryEntries(type?: string): Promise<MemoryEntriesResponse | MemoryEntryRecord[] | WorkingMemorySnapshot | {}> {
+export async function getMemoryEntries(
+  type?: string
+): Promise<MemoryEntriesResponse | MemoryEntryRecord[] | WorkingMemorySnapshot | Record<string, never>> {
   const url = type
     ? `${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries?type=${type}`
     : `${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries`;
@@ -1510,14 +1852,25 @@ export async function getWorkingMemory(): Promise<WorkingMemorySnapshot | null> 
  * Delete a long-term memory entry by its stable id.
  *
  * Searches episodic, semantic, and procedural tiers on the server side.
- * Silently ignores network errors — the store's optimistic removal handles UI.
+ * Returns the backend status payload so the store can reconcile optimistic UI
+ * updates when a runtime-backed delete fails.
  *
  * @param id - The memory entry id to remove (e.g. 'ep-1', 'sem-2').
  */
-export async function deleteMemoryEntry(id: string): Promise<void> {
-  await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries/${id}`, {
+export async function deleteMemoryEntry(id: string): Promise<MemoryDeleteResult> {
+  const res = await fetch(`${resolveWorkbenchApiBaseUrl()}/api/agentos/memory/entries/${id}`, {
     method: 'DELETE',
   });
+  const payload = (await res.json().catch(() => null)) as {
+    mode?: 'runtime' | 'demo';
+    error?: string;
+  } | null;
+  return {
+    ok: res.ok,
+    status: res.status,
+    mode: payload?.mode,
+    error: payload?.error,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1549,6 +1902,7 @@ export interface VoiceSessionStatus {
  * Full response shape of `GET /api/voice/status`.
  */
 export interface VoiceStatusResponse {
+  mode?: 'runtime' | 'mixed' | 'demo' | 'local';
   providers: {
     stt: VoiceProviderStatus[];
     tts: VoiceProviderStatus[];

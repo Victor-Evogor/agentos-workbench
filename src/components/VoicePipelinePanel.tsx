@@ -35,6 +35,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useVoiceStore, type VoiceProvider, type VoiceSession } from '@/state/voiceStore';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 // ---------------------------------------------------------------------------
@@ -50,8 +51,8 @@ interface SubTabDescriptor {
 
 const SUB_TABS: SubTabDescriptor[] = [
   { key: 'providers', label: 'Providers' },
-  { key: 'config',    label: 'Config'    },
-  { key: 'sessions',  label: 'Sessions'  },
+  { key: 'config', label: 'Config' },
+  { key: 'sessions', label: 'Sessions' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -113,17 +114,17 @@ function ProviderGroup({ title, Icon, providers }: ProviderGroupProps) {
 // ---------------------------------------------------------------------------
 
 const SESSION_STATE_COLORS: Record<string, string> = {
-  listening:  'text-sky-400',
+  listening: 'text-sky-400',
   processing: 'text-amber-400',
-  speaking:   'text-emerald-400',
-  idle:       'theme-text-muted',
+  speaking: 'text-emerald-400',
+  idle: 'theme-text-muted',
 };
 
 const SESSION_STATE_RING: Record<string, string> = {
-  listening:  'border-sky-500/40 bg-sky-500/10',
+  listening: 'border-sky-500/40 bg-sky-500/10',
   processing: 'border-amber-500/40 bg-amber-500/10',
-  speaking:   'border-emerald-500/40 bg-emerald-500/10',
-  idle:       'theme-border theme-bg-primary',
+  speaking: 'border-emerald-500/40 bg-emerald-500/10',
+  idle: 'theme-border theme-bg-primary',
 };
 
 /**
@@ -146,7 +147,7 @@ function SessionCard({ session }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const stateLabel = session.state || 'idle';
   const stateColor = SESSION_STATE_COLORS[stateLabel] ?? 'theme-text-muted';
-  const ringClass  = SESSION_STATE_RING[stateLabel]  ?? 'theme-border theme-bg-primary';
+  const ringClass = SESSION_STATE_RING[stateLabel] ?? 'theme-border theme-bg-primary';
 
   return (
     <div className={`rounded-lg border px-3 py-2 transition-colors ${ringClass}`}>
@@ -206,13 +207,14 @@ function SessionCard({ session }: SessionCardProps) {
  * and monitoring UI; the actual audio pipeline runs externally.
  */
 export function VoicePipelinePanel() {
-  const providers    = useVoiceStore((s) => s.providers);
-  const config       = useVoiceStore((s) => s.config);
-  const sessions     = useVoiceStore((s) => s.sessions);
-  const loading      = useVoiceStore((s) => s.loading);
-  const error        = useVoiceStore((s) => s.error);
+  const providers = useVoiceStore((s) => s.providers);
+  const config = useVoiceStore((s) => s.config);
+  const sessions = useVoiceStore((s) => s.sessions);
+  const dataMode = useVoiceStore((s) => s.dataMode);
+  const loading = useVoiceStore((s) => s.loading);
+  const error = useVoiceStore((s) => s.error);
   const updateConfig = useVoiceStore((s) => s.updateConfig);
-  const fetchStatus  = useVoiceStore((s) => s.fetchStatus);
+  const fetchStatus = useVoiceStore((s) => s.fetchStatus);
 
   const [activeSubTab, setActiveSubTab] = useState<VoiceSubTab>('providers');
 
@@ -230,10 +232,23 @@ export function VoicePipelinePanel() {
             <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Voice</p>
             <h3 className="text-sm font-semibold theme-text-primary">Pipeline</h3>
           </div>
+          <DataSourceBadge
+            tone={dataMode}
+            label={
+              dataMode === 'mixed'
+                ? 'Mixed Status'
+                : dataMode === 'local'
+                  ? 'Local Defaults'
+                  : dataMode === 'runtime'
+                    ? 'Runtime Status'
+                    : 'Demo Status'
+            }
+            className="shrink-0"
+          />
           <HelpTooltip label="Explain voice pipeline panel" side="bottom">
-            Monitor STT/TTS/telephony provider configuration, adjust pipeline settings, and inspect live
-            voice sessions. The actual audio pipeline runs in the Wunderland CLI; this panel shows status
-            and lets you edit config that is written back to the runtime on save.
+            Monitor STT/TTS/telephony provider configuration, adjust pipeline settings, and inspect
+            live voice sessions. The actual audio pipeline runs in the Wunderland CLI; this panel
+            shows status and lets you edit config that is written back to the runtime on save.
           </HelpTooltip>
         </div>
         <button
@@ -280,12 +295,12 @@ export function VoicePipelinePanel() {
       {/* ------------------------------------------------------------------ */}
       {activeSubTab === 'providers' && (
         <div className="space-y-4">
-          <ProviderGroup title="Speech-to-Text" Icon={Mic}      providers={providers.stt}       />
-          <ProviderGroup title="Text-to-Speech" Icon={Volume2}  providers={providers.tts}       />
-          <ProviderGroup title="Telephony"       Icon={Phone}    providers={providers.telephony} />
+          <ProviderGroup title="Speech-to-Text" Icon={Mic} providers={providers.stt} />
+          <ProviderGroup title="Text-to-Speech" Icon={Volume2} providers={providers.tts} />
+          <ProviderGroup title="Telephony" Icon={Phone} providers={providers.telephony} />
           <p className="text-[10px] leading-relaxed theme-text-muted">
-            Set the required environment variable in your shell to configure a provider.
-            The backend checks for the key on each refresh.
+            Set the required environment variable in your shell to configure a provider. The backend
+            checks for the key on each refresh.
           </p>
         </div>
       )}
@@ -297,7 +312,9 @@ export function VoicePipelinePanel() {
         <div className="space-y-4 text-xs">
           {/* Endpointing mode */}
           <div>
-            <p className="mb-0.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Endpointing Mode</p>
+            <p className="mb-0.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+              Endpointing Mode
+            </p>
             <p className="mb-2 text-[10px] theme-text-secondary">
               Controls how the pipeline decides when the user has stopped speaking.
             </p>
@@ -305,16 +322,18 @@ export function VoicePipelinePanel() {
               {(['acoustic', 'heuristic', 'semantic'] as const).map((mode) => {
                 const selected = config.endpointing === mode;
                 const descriptions: Record<typeof mode, string> = {
-                  acoustic:  'Uses audio energy and silence thresholds to detect end-of-utterance.',
+                  acoustic: 'Uses audio energy and silence thresholds to detect end-of-utterance.',
                   heuristic: 'Rule-based timing: waits a fixed silence gap after last speech.',
-                  semantic:  'Waits until the utterance appears grammatically complete.',
+                  semantic: 'Waits until the utterance appears grammatically complete.',
                 };
                 return (
                   <label
                     key={mode}
                     className={[
                       'flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors',
-                      selected ? 'border-sky-500/60 bg-sky-500/10' : 'theme-border theme-bg-primary hover:bg-white/5',
+                      selected
+                        ? 'border-sky-500/60 bg-sky-500/10'
+                        : 'theme-border theme-bg-primary hover:bg-white/5',
                     ].join(' ')}
                   >
                     <input
@@ -325,10 +344,18 @@ export function VoicePipelinePanel() {
                       className="mt-0.5 shrink-0 accent-sky-500"
                     />
                     <div>
-                      <span className={selected ? 'text-xs font-semibold capitalize text-sky-400' : 'text-xs font-semibold capitalize theme-text-primary'}>
+                      <span
+                        className={
+                          selected
+                            ? 'text-xs font-semibold capitalize text-sky-400'
+                            : 'text-xs font-semibold capitalize theme-text-primary'
+                        }
+                      >
                         {mode}
                       </span>
-                      <p className="mt-0.5 text-[10px] theme-text-secondary">{descriptions[mode]}</p>
+                      <p className="mt-0.5 text-[10px] theme-text-secondary">
+                        {descriptions[mode]}
+                      </p>
                     </div>
                   </label>
                 );
@@ -338,7 +365,9 @@ export function VoicePipelinePanel() {
 
           {/* Barge-in mode */}
           <div>
-            <p className="mb-0.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Barge-In Mode</p>
+            <p className="mb-0.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+              Barge-In Mode
+            </p>
             <p className="mb-2 text-[10px] theme-text-secondary">
               How the pipeline handles the user speaking while the agent is responding.
             </p>
@@ -360,7 +389,9 @@ export function VoicePipelinePanel() {
                     key={mode}
                     className={[
                       'flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors',
-                      selected ? 'border-sky-500/60 bg-sky-500/10' : 'theme-border theme-bg-primary hover:bg-white/5',
+                      selected
+                        ? 'border-sky-500/60 bg-sky-500/10'
+                        : 'theme-border theme-bg-primary hover:bg-white/5',
                     ].join(' ')}
                   >
                     <input
@@ -371,10 +402,18 @@ export function VoicePipelinePanel() {
                       className="mt-0.5 shrink-0 accent-sky-500"
                     />
                     <div>
-                      <span className={selected ? 'text-xs font-semibold text-sky-400' : 'text-xs font-semibold theme-text-primary'}>
+                      <span
+                        className={
+                          selected
+                            ? 'text-xs font-semibold text-sky-400'
+                            : 'text-xs font-semibold theme-text-primary'
+                        }
+                      >
                         {labels[mode]}
                       </span>
-                      <p className="mt-0.5 text-[10px] theme-text-secondary">{descriptions[mode]}</p>
+                      <p className="mt-0.5 text-[10px] theme-text-secondary">
+                        {descriptions[mode]}
+                      </p>
                     </div>
                   </label>
                 );
@@ -386,7 +425,9 @@ export function VoicePipelinePanel() {
           <div className="grid gap-3 sm:grid-cols-2">
             {/* Diarization toggle */}
             <div>
-              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Diarization</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+                Diarization
+              </p>
               <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border theme-border theme-bg-primary px-3 py-2 transition-colors hover:bg-white/5">
                 <input
                   type="checkbox"
@@ -395,7 +436,9 @@ export function VoicePipelinePanel() {
                   className="shrink-0 accent-sky-500"
                 />
                 <div>
-                  <span className="text-xs font-semibold theme-text-primary">Speaker Diarization</span>
+                  <span className="text-xs font-semibold theme-text-primary">
+                    Speaker Diarization
+                  </span>
                   <p className="mt-0.5 text-[10px] theme-text-secondary">
                     Label transcript lines by speaker identity.
                   </p>
@@ -405,7 +448,9 @@ export function VoicePipelinePanel() {
 
             {/* Language selector */}
             <div>
-              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Language</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+                Language
+              </p>
               <label className="block">
                 <select
                   value={config.language}
@@ -435,7 +480,9 @@ export function VoicePipelinePanel() {
 
             {/* STT provider picker */}
             <div>
-              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">STT Provider</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+                STT Provider
+              </p>
               <label className="block">
                 <select
                   value={config.stt}
@@ -445,7 +492,8 @@ export function VoicePipelinePanel() {
                 >
                   {providers.stt.map((p) => (
                     <option key={p.id} value={p.id} disabled={!p.configured}>
-                      {p.name}{!p.configured ? ' (not configured)' : ''}
+                      {p.name}
+                      {!p.configured ? ' (not configured)' : ''}
                     </option>
                   ))}
                 </select>
@@ -454,7 +502,9 @@ export function VoicePipelinePanel() {
 
             {/* TTS provider + voice picker */}
             <div>
-              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">TTS Provider</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+                TTS Provider
+              </p>
               <label className="block">
                 <select
                   value={config.tts}
@@ -464,7 +514,8 @@ export function VoicePipelinePanel() {
                 >
                   {providers.tts.map((p) => (
                     <option key={p.id} value={p.id} disabled={!p.configured}>
-                      {p.name}{!p.configured ? ' (not configured)' : ''}
+                      {p.name}
+                      {!p.configured ? ' (not configured)' : ''}
                     </option>
                   ))}
                 </select>
@@ -473,7 +524,9 @@ export function VoicePipelinePanel() {
 
             {/* TTS voice name */}
             <div className="sm:col-span-2">
-              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">TTS Voice</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+                TTS Voice
+              </p>
               <label className="block">
                 <input
                   value={config.voice}
@@ -484,7 +537,7 @@ export function VoicePipelinePanel() {
                 />
               </label>
               <p className="mt-1 text-[10px] theme-text-muted">
-                Provider-specific voice name (e.g. "nova" for OpenAI, "rachel" for ElevenLabs).
+                Provider-specific voice name (e.g. &quot;nova&quot; for OpenAI, &quot;rachel&quot; for ElevenLabs).
               </p>
             </div>
           </div>
@@ -505,9 +558,7 @@ export function VoicePipelinePanel() {
               </p>
             </div>
           ) : (
-            sessions.map((session) => (
-              <SessionCard key={session.id} session={session} />
-            ))
+            sessions.map((session) => <SessionCard key={session.id} session={session} />)
           )}
         </div>
       )}

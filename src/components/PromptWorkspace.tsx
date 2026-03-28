@@ -16,7 +16,6 @@
 import { useCallback, useState } from 'react';
 import {
   BookOpen,
-  ChevronDown,
   ChevronRight,
   Clock,
   Columns,
@@ -44,6 +43,7 @@ interface PaneConfig {
 interface RunResult {
   text: string;
   toolCallCount: number;
+  runtimeMode?: 'live' | 'stub';
   usage: {
     promptTokens: number;
     completionTokens: number;
@@ -119,6 +119,22 @@ function formatCost(usd: number): string {
   return `$${usd.toFixed(4)}`;
 }
 
+function runtimeModeTone(mode?: 'live' | 'stub'): string {
+  if (mode === 'live') {
+    return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
+  }
+  if (mode === 'stub') {
+    return 'bg-amber-500/15 text-amber-300 border-amber-400/20';
+  }
+  return 'bg-[color:var(--color-background-secondary)] theme-text-muted theme-border';
+}
+
+function runtimeModeLabel(mode?: 'live' | 'stub'): string {
+  if (mode === 'live') return 'Live runtime';
+  if (mode === 'stub') return 'Demo fallback';
+  return 'Unknown mode';
+}
+
 function formatAgo(ts: number): string {
   const d = Date.now() - ts;
   if (d < 60_000) return 'just now';
@@ -155,6 +171,12 @@ function computeWordDiff(a: string, b: string): Array<{ text: string; status: 's
 function ResultMetrics({ result }: { result: RunResult }) {
   return (
     <dl className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] theme-text-muted border-t theme-border pt-1">
+      <div>
+        <dt className="inline">Mode</dt>{' '}
+        <dd className={`inline rounded-full border px-1.5 py-0.5 ${runtimeModeTone(result.runtimeMode)}`}>
+          {runtimeModeLabel(result.runtimeMode)}
+        </dd>
+      </div>
       <div><dt className="inline">Prompt</dt> <dd className="inline theme-text-secondary">{result.usage.promptTokens} tok</dd></div>
       <div><dt className="inline">Completion</dt> <dd className="inline theme-text-secondary">{result.usage.completionTokens} tok</dd></div>
       <div><dt className="inline">Cost</dt> <dd className="inline theme-text-secondary">{formatCost(result.usage.estimatedCostUsd)}</dd></div>
@@ -392,7 +414,8 @@ export function PromptWorkspace() {
       let buf = '';
       let usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCostUsd: 0 };
       let latencyMs = 0;
-      while (true) {
+      let runtimeMode: RunResult['runtimeMode'];
+      for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
@@ -406,11 +429,14 @@ export function PromptWorkspace() {
             if (chunk.type === 'done') {
               usage = (chunk.usage as typeof usage) ?? usage;
               latencyMs = Number(chunk.latencyMs ?? 0);
+              runtimeMode = chunk.runtimeMode === 'live' || chunk.runtimeMode === 'stub'
+                ? chunk.runtimeMode
+                : runtimeMode;
             }
           } catch { /* skip */ }
         }
       }
-      const result: RunResult = { text, toolCallCount: 0, usage, latencyMs };
+      const result: RunResult = { text, toolCallCount: 0, usage, latencyMs, runtimeMode };
       setResult(result);
       setHistory((prev) => [{
         id: generateId(),
@@ -530,9 +556,14 @@ export function PromptWorkspace() {
                           {formatAgo(entry.timestamp)}
                           {entry.resultA?.usage && (
                             <span className="ml-2">
-                              {entry.resultA.usage.totalTokens} tok • {formatCost(entry.resultA.usage.estimatedCostUsd)}
+                          {entry.resultA.usage.totalTokens} tok • {formatCost(entry.resultA.usage.estimatedCostUsd)}
+                          {entry.resultA.runtimeMode && (
+                            <span className={`ml-2 rounded-full border px-1.5 py-0.5 ${runtimeModeTone(entry.resultA.runtimeMode)}`}>
+                              {runtimeModeLabel(entry.resultA.runtimeMode)}
                             </span>
                           )}
+                        </span>
+                      )}
                         </p>
                       </div>
                       <div className="flex gap-1">

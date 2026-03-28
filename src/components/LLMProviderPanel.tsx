@@ -24,7 +24,6 @@ import {
   Wrench,
   MessageSquare,
   Database,
-  DollarSign,
   type LucideIcon,
 } from 'lucide-react';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
@@ -207,7 +206,9 @@ export function LLMProviderPanel() {
           >
             <RefreshCw size={12} className={`theme-text-muted ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <HelpTooltip text="9 LLM providers supported. Set an API key to configure a provider. Use Test to verify connectivity." />
+          <HelpTooltip label="Explain LLM provider panel" side="bottom">
+            9 LLM providers supported. Set an API key to configure a provider. Use Test to verify connectivity.
+          </HelpTooltip>
         </div>
       </div>
 

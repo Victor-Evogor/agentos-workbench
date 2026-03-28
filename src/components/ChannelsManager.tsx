@@ -40,17 +40,14 @@ import {
   AlertTriangle,
   Gauge,
   ChevronDown,
-  ChevronRight,
   Globe,
   Loader2,
 } from 'lucide-react';
 import { resolveWorkbenchApiBaseUrl } from '@/lib/agentosClient';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
-import {
-  useChannelsStore,
-  type ChannelInfo,
-  type ChannelMessage,
-} from '@/state/channelsStore';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
+import { useChannelsStore, type ChannelInfo } from '@/state/channelsStore';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -68,7 +65,48 @@ function generateId(): string {
   return `msg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-const STATUS_BADGE: Record<ChannelInfo['status'], { label: string; cls: string; Icon: typeof CheckCircle2 }> = {
+function resolveWorkbenchDataMode(value: unknown, fallback: WorkbenchDataMode): WorkbenchDataMode {
+  return value === 'runtime' || value === 'mixed' || value === 'demo' || value === 'local'
+    ? value
+    : fallback;
+}
+
+function extractModeFromText(responseText: string, fallback: WorkbenchDataMode): WorkbenchDataMode {
+  try {
+    const parsed = JSON.parse(responseText) as { mode?: unknown };
+    return resolveWorkbenchDataMode(parsed.mode, fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function getChannelsHeaderTone(
+  subTab: ChannelSubTab,
+  dataMode: WorkbenchDataMode
+): WorkbenchDataMode {
+  if (dataMode === 'local') return 'local';
+  if (subTab === 'webhook') return dataMode === 'mixed' ? 'mixed' : 'demo';
+  return dataMode === 'runtime' ? 'runtime' : 'demo';
+}
+
+function getChannelsHeaderLabel(subTab: ChannelSubTab, tone: WorkbenchDataMode): string {
+  if (subTab === 'webhook') {
+    if (tone === 'mixed') return 'Mixed Webhook Test';
+    if (tone === 'runtime') return 'Runtime Webhook Test';
+    if (tone === 'local') return 'Local Webhook Fallback';
+    return 'Demo Webhook State';
+  }
+
+  if (tone === 'runtime') return 'Runtime Channels';
+  if (tone === 'mixed') return 'Mixed Channels';
+  if (tone === 'local') return 'Local Channel State';
+  return 'Demo Channels';
+}
+
+const STATUS_BADGE: Record<
+  ChannelInfo['status'],
+  { label: string; cls: string; Icon: typeof CheckCircle2 }
+> = {
   connected: {
     label: 'connected',
     cls: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300',
@@ -140,8 +178,13 @@ function ChannelCard({ channel, onOpenConfig }: ChannelCardProps) {
         </div>
       </div>
       <div className="mt-2 flex items-center gap-1">
-        <BadgeIcon size={10} className={badge.cls.split(' ').find((c) => c.startsWith('text-')) ?? ''} />
-        <span className={`rounded-full border px-1.5 py-px text-[9px] font-medium uppercase tracking-wide ${badge.cls}`}>
+        <BadgeIcon
+          size={10}
+          className={badge.cls.split(' ').find((c) => c.startsWith('text-')) ?? ''}
+        />
+        <span
+          className={`rounded-full border px-1.5 py-px text-[9px] font-medium uppercase tracking-wide ${badge.cls}`}
+        >
           {badge.label}
         </span>
       </div>
@@ -190,7 +233,13 @@ function CredentialSheet({
         <div key={field}>
           <p className="mb-0.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">{field}</p>
           <input
-            type={field.toLowerCase().includes('secret') || field.toLowerCase().includes('password') || field.toLowerCase().includes('token') ? 'password' : 'text'}
+            type={
+              field.toLowerCase().includes('secret') ||
+              field.toLowerCase().includes('password') ||
+              field.toLowerCase().includes('token')
+                ? 'password'
+                : 'text'
+            }
             value={value}
             onChange={(e) => onUpdate(channel.id, field, e.target.value)}
             placeholder={`Enter ${field}`}
@@ -276,31 +325,40 @@ export function ChannelsManager() {
 
   const channels = useChannelsStore((s) => s.channels);
   const messages = useChannelsStore((s) => s.messages);
+  const dataMode = useChannelsStore((s) => s.dataMode);
   const loading = useChannelsStore((s) => s.loading);
+  const applyBackendSnapshot = useChannelsStore((s) => s.applyBackendSnapshot);
   const updateChannel = useChannelsStore((s) => s.updateChannel);
   const addMessage = useChannelsStore((s) => s.addMessage);
-  const setChannels = useChannelsStore((s) => s.setChannels);
+  const setDataMode = useChannelsStore((s) => s.setDataMode);
   const setLoading = useChannelsStore((s) => s.setLoading);
   const setStoreError = useChannelsStore((s) => s.setError);
 
   // Load channel status on mount
-  const loadStatus = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    setStoreError(null);
-    try {
-      const base = buildBaseUrl();
-      const res = await fetch(`${base}/api/channels/status`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { channels?: ChannelInfo[] };
-      if (data.channels) {
-        setChannels(data.channels);
+  const loadStatus = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      setStoreError(null);
+      try {
+        const base = buildBaseUrl();
+        const res = await fetch(`${base}/api/channels/status`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as {
+          channels?: ChannelInfo[];
+          mode?: WorkbenchDataMode;
+        };
+        if (data.channels) {
+          applyBackendSnapshot(data.channels, resolveWorkbenchDataMode(data.mode, 'demo'));
+        }
+      } catch {
+        setDataMode('local');
+        // Backend may be unavailable; retain local defaults
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      // Backend may be unavailable; retain local defaults
-    } finally {
-      setLoading(false);
-    }
-  }, [setChannels, setLoading, setStoreError]);
+    },
+    [applyBackendSnapshot, setDataMode, setLoading, setStoreError]
+  );
 
   useEffect(() => {
     void loadStatus();
@@ -314,7 +372,10 @@ export function ChannelsManager() {
     setConnecting(true);
     setLocalError(null);
     const channel = channels.find((c) => c.id === id);
-    if (!channel) { setConnecting(false); return; }
+    if (!channel) {
+      setConnecting(false);
+      return;
+    }
     try {
       const base = buildBaseUrl();
       const res = await fetch(`${base}/api/channels/${id}/connect`, {
@@ -322,9 +383,22 @@ export function ChannelsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credentials: channel.credentials }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      updateChannel(id, { status: 'connected', lastMessageAt: Date.now() });
-    } catch {
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as {
+        mode?: WorkbenchDataMode;
+        status?: ChannelInfo['status'];
+      };
+      setDataMode(resolveWorkbenchDataMode(data.mode, 'demo'));
+      updateChannel(id, {
+        status: data.status ?? 'connected',
+        lastMessageAt: Date.now(),
+      });
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Connect failed.');
+      setDataMode('local');
       // Optimistically mark as connected in dev without a running backend
       updateChannel(id, { status: 'connected', lastMessageAt: Date.now() });
     } finally {
@@ -336,8 +410,13 @@ export function ChannelsManager() {
     setConnecting(true);
     try {
       const base = buildBaseUrl();
-      await fetch(`${base}/api/channels/${id}/disconnect`, { method: 'POST' });
+      const res = await fetch(`${base}/api/channels/${id}/disconnect`, { method: 'POST' });
+      const data = res.ok
+        ? ((await res.json()) as { mode?: WorkbenchDataMode; status?: ChannelInfo['status'] })
+        : null;
+      setDataMode(resolveWorkbenchDataMode(data?.mode, 'demo'));
     } catch {
+      setDataMode('local');
       // Ignore
     } finally {
       updateChannel(id, { status: 'disconnected' });
@@ -364,6 +443,8 @@ export function ChannelsManager() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { mode?: WorkbenchDataMode };
+      setDataMode(resolveWorkbenchDataMode(data.mode, 'demo'));
       // Add a local log entry for each target
       for (const cid of broadcastTargets) {
         const ch = channels.find((c) => c.id === cid);
@@ -378,6 +459,7 @@ export function ChannelsManager() {
       }
       setBroadcastText('');
     } catch (err) {
+      setDataMode('local');
       setLocalError(err instanceof Error ? err.message : 'Broadcast failed.');
     } finally {
       setBroadcasting(false);
@@ -401,8 +483,10 @@ export function ChannelsManager() {
         body: JSON.stringify({ url: webhookUrl.trim(), payload: webhookPayload }),
       });
       const text = await res.text();
+      setDataMode(extractModeFromText(text, 'mixed'));
       setWebhookResult(`Status: ${res.status}\n\n${text}`);
     } catch (err) {
+      setDataMode('local');
       setWebhookResult(`[error] ${err instanceof Error ? err.message : 'Request failed.'}`);
     } finally {
       setTestingWebhook(false);
@@ -416,9 +500,10 @@ export function ChannelsManager() {
   const connectedChannels = channels.filter((c) => c.status === 'connected');
   const configChannel = channels.find((c) => c.id === configChannelId) ?? null;
 
-  const filteredChannels = categoryFilter === 'all'
-    ? channels
-    : channels.filter((c) => c.category === categoryFilter);
+  const filteredChannels =
+    categoryFilter === 'all' ? channels : channels.filter((c) => c.category === categoryFilter);
+  const headerTone = getChannelsHeaderTone(subTab, dataMode);
+  const headerLabel = getChannelsHeaderLabel(subTab, headerTone);
 
   // -------------------------------------------------------------------------
   // Render
@@ -433,6 +518,7 @@ export function ChannelsManager() {
             <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Channels</p>
             <h3 className="text-sm font-semibold theme-text-primary">Channel Manager</h3>
           </div>
+          <DataSourceBadge tone={headerTone} label={headerLabel} className="shrink-0" />
           <HelpTooltip label="Explain channels manager" side="bottom">
             Connect and manage all 37 supported channel platforms. Click a channel card to configure
             credentials and connect. Use Broadcast to send a message to multiple channels at once,
@@ -461,13 +547,17 @@ export function ChannelsManager() {
       {/* Summary bar */}
       <div className="mb-3 flex items-center gap-4 rounded-lg border theme-border theme-bg-primary px-3 py-2 text-[10px]">
         <span className="theme-text-muted">
-          Connected: <span className="font-semibold text-emerald-400">{connectedChannels.length}</span>
+          Connected:{' '}
+          <span className="font-semibold text-emerald-400">{connectedChannels.length}</span>
         </span>
         <span className="theme-text-muted">
           Total: <span className="font-semibold theme-text-primary">{channels.length}</span>
         </span>
         <span className="theme-text-muted">
-          Errors: <span className="font-semibold text-rose-400">{channels.filter((c) => c.status === 'error').length}</span>
+          Errors:{' '}
+          <span className="font-semibold text-rose-400">
+            {channels.filter((c) => c.status === 'error').length}
+          </span>
         </span>
       </div>
 
@@ -477,7 +567,10 @@ export function ChannelsManager() {
           <button
             key={key}
             type="button"
-            onClick={() => { setSubTab(key); setConfigChannelId(null); }}
+            onClick={() => {
+              setSubTab(key);
+              setConfigChannelId(null);
+            }}
             className={[
               'shrink-0 rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               subTab === key
@@ -536,9 +629,7 @@ export function ChannelsManager() {
               <ChannelCard
                 key={channel.id}
                 channel={channel}
-                onOpenConfig={(id) =>
-                  setConfigChannelId((prev) => (prev === id ? null : id))
-                }
+                onOpenConfig={(id) => setConfigChannelId((prev) => (prev === id ? null : id))}
               />
             ))}
           </div>
@@ -665,7 +756,8 @@ export function ChannelsManager() {
                       checked={checked}
                       onChange={() => {
                         const next = new Set(broadcastTargets);
-                        if (checked) next.delete(ch.id); else next.add(ch.id);
+                        if (checked) next.delete(ch.id);
+                        else next.add(ch.id);
                         setBroadcastTargets(next);
                       }}
                       className="shrink-0 accent-sky-500"
@@ -688,12 +780,10 @@ export function ChannelsManager() {
             disabled={broadcasting || !broadcastText.trim() || broadcastTargets.size === 0}
             className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-4 py-1.5 text-[10px] font-semibold text-sky-400 transition hover:bg-sky-500/20 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           >
-            {broadcasting ? (
-              <Loader2 size={10} className="animate-spin" />
-            ) : (
-              <Send size={10} />
-            )}
-            {broadcasting ? 'Broadcasting…' : `Broadcast to ${broadcastTargets.size} channel${broadcastTargets.size !== 1 ? 's' : ''}`}
+            {broadcasting ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
+            {broadcasting
+              ? 'Broadcasting…'
+              : `Broadcast to ${broadcastTargets.size} channel${broadcastTargets.size !== 1 ? 's' : ''}`}
           </button>
         </div>
       )}
