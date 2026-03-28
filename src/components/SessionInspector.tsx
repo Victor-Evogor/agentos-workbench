@@ -15,6 +15,7 @@ import {
 } from "@/types/agentos";
 import { AlertTriangle, Database, GitBranch, RefreshCw, Sparkles, Users } from "lucide-react";
 import { WidgetEmbed } from "./WidgetEmbed";
+import { DocumentCard } from "./DocumentCard";
 import { useSessionStore } from "@/state/sessionStore";
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { exportAllData } from "@/lib/dataExport";
@@ -244,6 +245,37 @@ function renderEventBody(type: AgentOSChunkType | "log", payload: unknown): Reac
 
   if (type === AgentOSChunkType.TOOL_RESULT_EMISSION) {
     const chunk = payload as AgentOSToolResultEmissionChunk;
+
+    // Render document_export results as a styled DocumentCard instead of raw JSON
+    if (chunk.toolName === "document_export" && chunk.isSuccess && chunk.toolResult) {
+      const result = chunk.toolResult as Record<string, unknown>;
+      if (
+        typeof result.format === "string" &&
+        typeof result.filename === "string" &&
+        typeof result.sizeBytes === "number" &&
+        typeof result.downloadUrl === "string"
+      ) {
+        return (
+          <div className="space-y-3 text-sm text-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Document export</p>
+                <p className="text-slate-100">{chunk.toolName}</p>
+              </div>
+              <span className="text-xs text-emerald-300">Success</span>
+            </div>
+            <DocumentCard
+              format={result.format as string}
+              filename={result.filename as string}
+              sizeBytes={result.sizeBytes as number}
+              downloadUrl={result.downloadUrl as string}
+              previewUrl={typeof result.previewUrl === "string" ? result.previewUrl : undefined}
+            />
+          </div>
+        );
+      }
+    }
+
     return (
       <div className="space-y-3 text-sm text-slate-200">
         <div className="flex items-center justify-between">
