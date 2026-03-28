@@ -1,5 +1,6 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -21,9 +22,12 @@ import socialRoutes from './routes/social';
 import guardrailRoutes from './routes/guardrails';
 import observabilityRoutes from './routes/observability';
 import ragRoutes from './routes/rag';
+import ragRuntimeRoutes from './routes/ragRuntime';
 import eventsRoutes from './routes/events';
 import playgroundRoutes from './routes/playground';
-import { initializeAgentOS } from './lib/agentos';
+import { initializeAgentOS, persistAgentOSRuntimeRag, shutdownAgentOS } from './lib/agentos';
+import { WORKBENCH_RUNTIME_RAG_DOCUMENT_PERSIST_PATH } from './lib/workbenchRuntimeRag';
+import { runtimeRagDocumentStore } from './services/runtimeRagDocumentStore';
 import { config } from 'dotenv';
 config()
 
@@ -36,6 +40,7 @@ const server = fastify({
  */
 async function main() {
   await initializeAgentOS();
+  await runtimeRagDocumentStore.initialize(WORKBENCH_RUNTIME_RAG_DOCUMENT_PERSIST_PATH);
   const configuredPort = Number(
     process.env.AGENTOS_WORKBENCH_BACKEND_PORT ?? process.env.PORT ?? 3001
   );
@@ -75,6 +80,14 @@ async function main() {
     credentials: true
   });
 
+  await server.register(multipart, {
+    limits: {
+      fileSize: 18 * 1024 * 1024,
+      files: 1,
+      parts: 10,
+    },
+  });
+
   // Register Rate Limit
   await server.register(rateLimit, {
     max: 100,
@@ -90,6 +103,7 @@ async function main() {
   server.register(userRoutes, { prefix: '/api/user' });
   server.register(skillRoutes, { prefix: '/api/agentos' });
   server.register(memoryRoutes, { prefix: '/api/agentos' });
+  server.register(ragRuntimeRoutes, { prefix: '/api/agentos' });
   server.register(voiceRoutes, { prefix: '/api/voice' });
   server.register(approvalsRoutes, { prefix: '/api/agency' });
   server.register(discoveryRoutes, { prefix: '/api/agency' });
@@ -120,6 +134,32 @@ async function main() {
     }
   }, async () => {
     return { status: 'ok', port };
+  });
+
+  let shuttingDown = false;
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    server.log.info({ signal }, 'Shutting down AgentOS Workbench backend');
+    try {
+      await runtimeRagDocumentStore.persist();
+      await persistAgentOSRuntimeRag();
+      await shutdownAgentOS();
+      await server.close();
+      process.exit(0);
+    } catch (error) {
+      server.log.error({ err: error, signal }, 'Failed during graceful shutdown');
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
   });
 
   try {

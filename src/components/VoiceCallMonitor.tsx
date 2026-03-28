@@ -25,11 +25,8 @@ import {
   Activity,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  useVoiceCallStore,
-  type VoiceCall,
-  type CallTranscriptLine,
-} from '@/state/voiceCallStore';
+import { useVoiceCallStore, type VoiceCall, type CallTranscriptLine } from '@/state/voiceCallStore';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 // ---------------------------------------------------------------------------
@@ -38,12 +35,15 @@ import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 type MonitorSubTab = 'live' | 'controls' | 'history';
 
-interface SubTabDef { key: MonitorSubTab; label: string }
+interface SubTabDef {
+  key: MonitorSubTab;
+  label: string;
+}
 
 const SUB_TABS: SubTabDef[] = [
-  { key: 'live',     label: 'Live'     },
+  { key: 'live', label: 'Live' },
   { key: 'controls', label: 'Controls' },
-  { key: 'history',  label: 'History'  },
+  { key: 'history', label: 'History' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -51,10 +51,22 @@ const SUB_TABS: SubTabDef[] = [
 // ---------------------------------------------------------------------------
 
 const STATE_BADGE: Record<string, { bg: string; text: string; dot: string }> = {
-  listening:  { bg: 'bg-sky-500/15 border border-sky-500/40',      text: 'text-sky-300',     dot: 'bg-sky-400 animate-pulse' },
-  processing: { bg: 'bg-amber-500/15 border border-amber-500/40',  text: 'text-amber-300',   dot: 'bg-amber-400 animate-spin' },
-  speaking:   { bg: 'bg-emerald-500/15 border border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-400 animate-pulse' },
-  idle:       { bg: 'theme-border theme-bg-primary',               text: 'theme-text-muted',  dot: 'bg-gray-500' },
+  listening: {
+    bg: 'bg-sky-500/15 border border-sky-500/40',
+    text: 'text-sky-300',
+    dot: 'bg-sky-400 animate-pulse',
+  },
+  processing: {
+    bg: 'bg-amber-500/15 border border-amber-500/40',
+    text: 'text-amber-300',
+    dot: 'bg-amber-400 animate-spin',
+  },
+  speaking: {
+    bg: 'bg-emerald-500/15 border border-emerald-500/40',
+    text: 'text-emerald-300',
+    dot: 'bg-emerald-400 animate-pulse',
+  },
+  idle: { bg: 'theme-border theme-bg-primary', text: 'theme-text-muted', dot: 'bg-gray-500' },
 };
 
 /**
@@ -63,7 +75,9 @@ const STATE_BADGE: Record<string, { bg: string; text: string; dot: string }> = {
 function CallStateBadge({ state }: { state: string }) {
   const s = STATE_BADGE[state] ?? STATE_BADGE.idle;
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest ${s.bg} ${s.text}`}>
+    <div
+      className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest ${s.bg} ${s.text}`}
+    >
       <span className={`h-2 w-2 rounded-full shrink-0 ${s.dot}`} aria-hidden="true" />
       {state}
     </div>
@@ -103,7 +117,11 @@ function BargeInFlash({ visible, interruptedText }: BargeInFlashProps) {
 // Audio metrics row
 // ---------------------------------------------------------------------------
 
-interface MetricBadgeProps { label: string; value: string; Icon: LucideIcon }
+interface MetricBadgeProps {
+  label: string;
+  value: string;
+  Icon: LucideIcon;
+}
 
 function MetricBadge({ label, value, Icon }: MetricBadgeProps) {
   return (
@@ -142,7 +160,9 @@ function TranscriptView({ lines, loading }: { lines: CallTranscriptLine[]; loadi
     return (
       <div className="flex flex-col items-center gap-2 rounded-lg border theme-border theme-bg-primary py-6 text-center">
         <Mic size={18} className="theme-text-muted" aria-hidden="true" />
-        <p className="text-[10px] theme-text-muted">No transcript yet. Select a call or wait for a live session.</p>
+        <p className="text-[10px] theme-text-muted">
+          No transcript yet. Select a call or wait for a live session.
+        </p>
       </div>
     );
   }
@@ -160,7 +180,9 @@ function TranscriptView({ lines, loading }: { lines: CallTranscriptLine[]; loadi
             {line.speaker}
           </span>
           <div className="flex-1 min-w-0">
-            <span className={`theme-text-primary ${line.bargedIn ? 'line-through opacity-60' : ''}`}>
+            <span
+              className={`theme-text-primary ${line.bargedIn ? 'line-through opacity-60' : ''}`}
+            >
               {line.text}
             </span>
             {line.bargedIn && (
@@ -173,7 +195,11 @@ function TranscriptView({ lines, loading }: { lines: CallTranscriptLine[]; loadi
             className="shrink-0 font-mono text-[9px] theme-text-muted"
             dateTime={line.timestamp}
           >
-            {new Date(line.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {new Date(line.timestamp).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })}
           </time>
         </li>
       ))}
@@ -189,7 +215,9 @@ function TranscriptView({ lines, loading }: { lines: CallTranscriptLine[]; loadi
 function ProviderChain({ selected, chain }: { selected: string; chain: string[] }) {
   return (
     <div className="space-y-1">
-      <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Provider Resolution</p>
+      <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+        Provider Resolution
+      </p>
       <div className="flex flex-wrap items-center gap-1">
         {chain.map((p, idx) => (
           <span key={p} className="flex items-center gap-1">
@@ -234,10 +262,14 @@ function CallHistoryRow({ call, selected, onSelect }: CallHistoryRowProps) {
     <li
       className={[
         'rounded-lg border px-3 py-2 transition-colors cursor-pointer',
-        selected ? 'border-sky-500/60 bg-sky-500/10' : 'theme-border theme-bg-primary hover:bg-white/5',
+        selected
+          ? 'border-sky-500/60 bg-sky-500/10'
+          : 'theme-border theme-bg-primary hover:bg-white/5',
       ].join(' ')}
       onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onSelect();
+      }}
       tabIndex={0}
       role="option"
       aria-selected={selected}
@@ -309,20 +341,21 @@ function useLiveCallSimulation() {
  * audio metrics, provider chain visualization, call controls, and call history.
  */
 export function VoiceCallMonitor() {
-  const calls            = useVoiceCallStore((s) => s.calls);
-  const transcript       = useVoiceCallStore((s) => s.activeCallTranscript);
-  const selectedCallId   = useVoiceCallStore((s) => s.selectedCallId);
-  const bargeInFlash     = useVoiceCallStore((s) => s.bargeInFlash);
-  const bargeInText      = useVoiceCallStore((s) => s.bargeInText);
-  const audioMetrics     = useVoiceCallStore((s) => s.audioMetrics);
-  const loading          = useVoiceCallStore((s) => s.loading);
+  const calls = useVoiceCallStore((s) => s.calls);
+  const transcript = useVoiceCallStore((s) => s.activeCallTranscript);
+  const selectedCallId = useVoiceCallStore((s) => s.selectedCallId);
+  const dataMode = useVoiceCallStore((s) => s.dataMode);
+  const bargeInFlash = useVoiceCallStore((s) => s.bargeInFlash);
+  const bargeInText = useVoiceCallStore((s) => s.bargeInText);
+  const audioMetrics = useVoiceCallStore((s) => s.audioMetrics);
+  const loading = useVoiceCallStore((s) => s.loading);
   const transcriptLoading = useVoiceCallStore((s) => s.transcriptLoading);
-  const fetchCalls       = useVoiceCallStore((s) => s.fetchCalls);
-  const fetchTranscript  = useVoiceCallStore((s) => s.fetchTranscript);
+  const fetchCalls = useVoiceCallStore((s) => s.fetchCalls);
+  const fetchTranscript = useVoiceCallStore((s) => s.fetchTranscript);
 
   const [activeSubTab, setActiveSubTab] = useState<MonitorSubTab>('live');
-  const [muted, setMuted]               = useState(false);
-  const [recording, setRecording]       = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [recording, setRecording] = useState(false);
 
   // Simulated live call state (rotates automatically as a demo).
   const liveState = useLiveCallSimulation();
@@ -349,9 +382,22 @@ export function VoiceCallMonitor() {
             <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Voice</p>
             <h3 className="text-sm font-semibold theme-text-primary">Call Monitor</h3>
           </div>
+          <DataSourceBadge
+            tone={dataMode}
+            label={
+              dataMode === 'runtime'
+                ? 'Runtime Calls'
+                : dataMode === 'mixed'
+                  ? 'Mixed Calls'
+                  : dataMode === 'local'
+                    ? 'Local Calls'
+                    : 'Demo Calls'
+            }
+            className="shrink-0"
+          />
           <HelpTooltip label="Explain call monitor" side="bottom">
-            Live transcript viewer and historical call browser for the AgentOS voice pipeline.
-            The Live tab shows a simulated call state when no real session is active.
+            Live transcript viewer and historical call browser for the AgentOS voice pipeline. The
+            Live tab shows a simulated call state when no real session is active.
           </HelpTooltip>
         </div>
         <button
@@ -399,17 +445,18 @@ export function VoiceCallMonitor() {
 
           {/* Audio metrics row */}
           <div className="flex flex-wrap gap-2">
-            <MetricBadge label="Latency"   value={`${audioMetrics.latencyMs} ms`}            Icon={Activity} />
-            <MetricBadge label="VAD conf." value={`${Math.round(audioMetrics.vadConfidence * 100)}%`} Icon={Mic}      />
-            <MetricBadge label="Endpoint"  value={audioMetrics.endpointMode}                 Icon={Cpu}      />
+            <MetricBadge label="Latency" value={`${audioMetrics.latencyMs} ms`} Icon={Activity} />
+            <MetricBadge
+              label="VAD conf."
+              value={`${Math.round(audioMetrics.vadConfidence * 100)}%`}
+              Icon={Mic}
+            />
+            <MetricBadge label="Endpoint" value={audioMetrics.endpointMode} Icon={Cpu} />
           </div>
 
           {/* Provider chain */}
           {selectedCall && (
-            <ProviderChain
-              selected={selectedCall.sttProvider}
-              chain={selectedCall.providerChain}
-            />
+            <ProviderChain selected={selectedCall.sttProvider} chain={selectedCall.providerChain} />
           )}
 
           {/* Live transcript */}
@@ -428,7 +475,7 @@ export function VoiceCallMonitor() {
       {activeSubTab === 'controls' && (
         <div className="space-y-4">
           <p className="text-[10px] theme-text-secondary">
-            Call controls affect the active voice pipeline session.  In demo mode these buttons
+            Call controls affect the active voice pipeline session. In demo mode these buttons
             toggle local UI state only.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -444,7 +491,11 @@ export function VoiceCallMonitor() {
               ].join(' ')}
               title={muted ? 'Unmute microphone' : 'Mute microphone'}
             >
-              {muted ? <MicOff size={13} aria-hidden="true" /> : <Mic size={13} aria-hidden="true" />}
+              {muted ? (
+                <MicOff size={13} aria-hidden="true" />
+              ) : (
+                <Mic size={13} aria-hidden="true" />
+              )}
               {muted ? 'Unmute' : 'Mute'}
             </button>
 
@@ -470,16 +521,32 @@ export function VoiceCallMonitor() {
               ].join(' ')}
               title={recording ? 'Stop recording' : 'Start recording'}
             >
-              <Circle size={13} className={recording ? 'fill-red-400 text-red-400' : ''} aria-hidden="true" />
+              <Circle
+                size={13}
+                className={recording ? 'fill-red-400 text-red-400' : ''}
+                aria-hidden="true"
+              />
               {recording ? 'Stop Recording' : 'Start Recording'}
             </button>
           </div>
 
           {/* Status labels */}
           <div className="space-y-1 text-[10px] theme-text-muted">
-            <p>Microphone: <span className={muted ? 'text-rose-400' : 'text-emerald-400'}>{muted ? 'muted' : 'live'}</span></p>
-            <p>Recording: <span className={recording ? 'text-red-400' : 'theme-text-muted'}>{recording ? 'active' : 'off'}</span></p>
-            <p>Session state: <span className="text-sky-400">{liveState}</span></p>
+            <p>
+              Microphone:{' '}
+              <span className={muted ? 'text-rose-400' : 'text-emerald-400'}>
+                {muted ? 'muted' : 'live'}
+              </span>
+            </p>
+            <p>
+              Recording:{' '}
+              <span className={recording ? 'text-red-400' : 'theme-text-muted'}>
+                {recording ? 'active' : 'off'}
+              </span>
+            </p>
+            <p>
+              Session state: <span className="text-sky-400">{liveState}</span>
+            </p>
           </div>
         </div>
       )}
@@ -490,11 +557,7 @@ export function VoiceCallMonitor() {
       {activeSubTab === 'history' && (
         <div className="space-y-3">
           {/* Call list */}
-          <ul
-            className="space-y-1.5"
-            role="listbox"
-            aria-label="Past calls"
-          >
+          <ul className="space-y-1.5" role="listbox" aria-label="Past calls">
             {calls.map((call) => (
               <CallHistoryRow
                 key={call.id}
@@ -533,7 +596,11 @@ export function VoiceCallMonitor() {
                   </div>
                   <div>
                     <span className="theme-text-muted">Duration:</span>{' '}
-                    <span>{selectedCall.durationSeconds != null ? formatDuration(selectedCall.durationSeconds) : '—'}</span>
+                    <span>
+                      {selectedCall.durationSeconds != null
+                        ? formatDuration(selectedCall.durationSeconds)
+                        : '—'}
+                    </span>
                   </div>
                   <div>
                     <span className="theme-text-muted">STT:</span>{' '}

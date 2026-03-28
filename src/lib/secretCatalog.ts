@@ -1,9 +1,14 @@
-import {
-  EXTENSION_SECRET_DEFINITIONS,
-  type ExtensionSecretDefinition
-} from '@framers/agentos';
+import extensionSecretDefinitions from '../../../../packages/agentos/src/config/extension-secrets.json';
 
-export type SecretDefinition = ExtensionSecretDefinition;
+export interface SecretDefinition {
+  id: string;
+  label: string;
+  description?: string;
+  envVar?: string;
+  docsUrl?: string;
+  optional?: boolean;
+  providers?: string[];
+}
 
-export const secretDefinitions: SecretDefinition[] = EXTENSION_SECRET_DEFINITIONS;
+export const secretDefinitions = extensionSecretDefinitions as SecretDefinition[];
 export const secretDefinitionMap = new Map(secretDefinitions.map((def) => [def.id, def]));

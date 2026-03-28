@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useWorkflowDefinitions } from "@/hooks/useWorkflowDefinitions";
 import { useSessionStore } from "@/state/sessionStore";
 import { agentOSConfig } from "@/lib/env";
+import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -89,7 +90,13 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
     <div className="flex h-full flex-col gap-3 card-panel--strong p-4 transition-theme" data-tour="composer">
       <header>
         <p className="text-[10px] uppercase tracking-[0.25em] theme-text-muted">{t("requestComposer.header.title")}</p>
-        <h2 className="text-sm font-semibold theme-text-primary">{t("requestComposer.header.subtitle")}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold theme-text-primary">{t("requestComposer.header.subtitle")}</h2>
+          <HelpTooltip label="Explain request composer" side="bottom">
+            Send a single turn to the active persona or agency session. Persona sessions serialize one action at a time.
+            Agency sessions can also attach an optional workflow definition for coordinated multi-seat execution.
+          </HelpTooltip>
+        </div>
       </header>
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-3 transition-theme" aria-busy={isStreaming} aria-live="polite">
         <fieldset disabled={isStreaming || disabled} className="flex flex-1 flex-col gap-3">
@@ -126,6 +133,7 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
                 <span className="text-[10px] theme-text-muted">Workflow (optional)</span>
                 <select
                   {...form.register("workflowId")}
+                  title="Attach an optional workflow definition to this agency session request."
                   className="w-full rounded-md border theme-border bg-[color:var(--color-background-secondary)] px-2 py-1 text-xs theme-text-primary focus:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <option value="">No workflow</option>
@@ -148,6 +156,7 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
                 <button
                   key={idx}
                   type="button"
+                  title="Use this example prompt as the next request."
                   className="rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2 py-0.5 text-[10px] transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   onClick={() => form.setValue('input', ex)}
                 >
@@ -178,6 +187,7 @@ export function RequestComposer({ onSubmit, disabled = false }: RequestComposerP
         <div className="mt-auto flex flex-col gap-2 text-[10px] theme-text-secondary">
           <button
             type="submit"
+            title={activeSession ? 'Send this request to the active session.' : 'Select or create a session before sending a request.'}
             className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold theme-bg-accent theme-text-on-accent shadow-md transition hover:-translate-y-0.5 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isStreaming || disabled || !activeSession}
           >

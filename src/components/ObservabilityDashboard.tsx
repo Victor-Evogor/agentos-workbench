@@ -30,6 +30,7 @@ import {
   type ErrorLogEntry,
   type OtelSpan,
 } from '@/state/observabilityStore';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 // ---------------------------------------------------------------------------
@@ -40,11 +41,11 @@ type ObsSubTab = 'overview' | 'usage' | 'health' | 'errors' | 'spans' | 'budget'
 
 const SUB_TABS: Array<{ key: ObsSubTab; label: string }> = [
   { key: 'overview', label: 'Overview' },
-  { key: 'usage',    label: 'Usage'    },
-  { key: 'health',   label: 'Health'   },
-  { key: 'errors',   label: 'Errors'   },
-  { key: 'spans',    label: 'Spans'    },
-  { key: 'budget',   label: 'Budget'   },
+  { key: 'usage', label: 'Usage' },
+  { key: 'health', label: 'Health' },
+  { key: 'errors', label: 'Errors' },
+  { key: 'spans', label: 'Spans' },
+  { key: 'budget', label: 'Budget' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -114,7 +115,9 @@ function ProviderCostTable() {
 
   return (
     <div>
-      <p className="mb-2 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Provider Cost Breakdown</p>
+      <p className="mb-2 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+        Provider Cost Breakdown
+      </p>
       <table className="w-full text-[10px]">
         <thead>
           <tr className="border-b theme-border">
@@ -127,8 +130,12 @@ function ProviderCostTable() {
           {summary.providerCosts.map((row) => (
             <tr key={row.provider} className="border-b theme-border last:border-0">
               <td className="py-1.5 theme-text-primary">{row.provider}</td>
-              <td className="py-1.5 text-right font-mono theme-text-primary">${row.costUsd.toFixed(2)}</td>
-              <td className="py-1.5 text-right font-mono theme-text-secondary">{row.requestCount.toLocaleString()}</td>
+              <td className="py-1.5 text-right font-mono theme-text-primary">
+                ${row.costUsd.toFixed(2)}
+              </td>
+              <td className="py-1.5 text-right font-mono theme-text-secondary">
+                {row.requestCount.toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -152,10 +159,13 @@ function ProviderCostTable() {
 // Provider health row
 // ---------------------------------------------------------------------------
 
-const HEALTH_STYLES: Record<ProviderHealth['status'], { dot: string; label: string; text: string }> = {
-  ok:       { dot: 'bg-emerald-400',  label: 'OK',       text: 'text-emerald-400'  },
-  degraded: { dot: 'bg-amber-400',    label: 'Degraded', text: 'text-amber-400'    },
-  down:     { dot: 'bg-rose-500 animate-pulse', label: 'Down', text: 'text-rose-400' },
+const HEALTH_STYLES: Record<
+  ProviderHealth['status'],
+  { dot: string; label: string; text: string }
+> = {
+  ok: { dot: 'bg-emerald-400', label: 'OK', text: 'text-emerald-400' },
+  degraded: { dot: 'bg-amber-400', label: 'Degraded', text: 'text-amber-400' },
+  down: { dot: 'bg-rose-500 animate-pulse', label: 'Down', text: 'text-rose-400' },
 };
 
 function HealthRow({ ph }: { ph: ProviderHealth }) {
@@ -168,9 +178,7 @@ function HealthRow({ ph }: { ph: ProviderHealth }) {
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className={`font-semibold ${s.text}`}>{s.label}</span>
-        {ph.latencyMs > 0 && (
-          <span className="font-mono theme-text-muted">{ph.latencyMs} ms</span>
-        )}
+        {ph.latencyMs > 0 && <span className="font-mono theme-text-muted">{ph.latencyMs} ms</span>}
         <time className="font-mono theme-text-muted" dateTime={ph.checkedAt}>
           {new Date(ph.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </time>
@@ -191,12 +199,18 @@ function ErrorRow({ entry }: { entry: ErrorLogEntry }) {
           <p className="font-medium theme-text-primary truncate">{entry.errorMessage}</p>
           <p className="mt-0.5 theme-text-muted">
             <span className="font-mono">{entry.provider}</span>
-            {entry.statusCode && <span className="ml-2 text-rose-400">HTTP {entry.statusCode}</span>}
+            {entry.statusCode && (
+              <span className="ml-2 text-rose-400">HTTP {entry.statusCode}</span>
+            )}
           </p>
         </div>
         <div className="shrink-0 text-right space-y-0.5">
           <time className="font-mono theme-text-muted block" dateTime={entry.timestamp}>
-            {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {new Date(entry.timestamp).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })}
           </time>
           <p className="font-mono text-[9px] theme-text-muted">{entry.requestId}</p>
         </div>
@@ -210,7 +224,7 @@ function ErrorRow({ entry }: { entry: ErrorLogEntry }) {
 // ---------------------------------------------------------------------------
 
 const SPAN_STATUS_STYLES: Record<OtelSpan['status'], string> = {
-  ok:    'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  ok: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
   error: 'border-rose-500/30 bg-rose-500/10 text-rose-400',
   unset: 'theme-border theme-bg-primary theme-text-muted',
 };
@@ -218,13 +232,19 @@ const SPAN_STATUS_STYLES: Record<OtelSpan['status'], string> = {
 function SpanRow({ span }: { span: OtelSpan }) {
   return (
     <li className="flex items-center gap-2 rounded-lg border theme-border theme-bg-primary px-3 py-1.5 text-[10px]">
-      <span className={`rounded-sm border px-1.5 py-px text-[9px] font-medium uppercase ${SPAN_STATUS_STYLES[span.status]}`}>
+      <span
+        className={`rounded-sm border px-1.5 py-px text-[9px] font-medium uppercase ${SPAN_STATUS_STYLES[span.status]}`}
+      >
         {span.status}
       </span>
       <span className="flex-1 min-w-0 truncate font-mono theme-text-primary">{span.spanName}</span>
       <span className="shrink-0 font-mono theme-text-secondary">{span.durationMs} ms</span>
       <time className="shrink-0 font-mono text-[9px] theme-text-muted" dateTime={span.startedAt}>
-        {new Date(span.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        {new Date(span.startedAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })}
       </time>
     </li>
   );
@@ -249,7 +269,9 @@ function BudgetTracker() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Monthly Budget</p>
+        <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+          Monthly Budget
+        </p>
         <div className="flex items-center justify-between text-xs theme-text-secondary mb-1.5">
           <span>${summary.monthSpentUsd.toFixed(2)} spent</span>
           <span>${summary.monthlyBudgetUsd.toFixed(2)} budget</span>
@@ -270,7 +292,9 @@ function BudgetTracker() {
       <div className="rounded-lg border theme-border theme-bg-primary px-3 py-2.5 text-[10px] space-y-1">
         <div className="flex justify-between">
           <span className="theme-text-muted">Day of month</span>
-          <span className="theme-text-primary">{dayOfMonth} / {daysInMonth}</span>
+          <span className="theme-text-primary">
+            {dayOfMonth} / {daysInMonth}
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="theme-text-muted">Projected spend</span>
@@ -280,7 +304,9 @@ function BudgetTracker() {
         </div>
         <div className="flex justify-between">
           <span className="theme-text-muted">Budget remaining</span>
-          <span className="theme-text-primary">${Math.max(summary.monthlyBudgetUsd - summary.monthSpentUsd, 0).toFixed(2)}</span>
+          <span className="theme-text-primary">
+            ${Math.max(summary.monthlyBudgetUsd - summary.monthSpentUsd, 0).toFixed(2)}
+          </span>
         </div>
       </div>
 
@@ -307,12 +333,13 @@ function BudgetTracker() {
  */
 export function ObservabilityDashboard() {
   const summary = useObservabilityStore((s) => s.summary);
-  const errors  = useObservabilityStore((s) => s.errors);
-  const spans   = useObservabilityStore((s) => s.spans);
+  const errors = useObservabilityStore((s) => s.errors);
+  const spans = useObservabilityStore((s) => s.spans);
+  const dataMode = useObservabilityStore((s) => s.dataMode);
   const loading = useObservabilityStore((s) => s.loading);
-  const fetchAll    = useObservabilityStore((s) => s.fetchAll);
+  const fetchAll = useObservabilityStore((s) => s.fetchAll);
   const fetchErrors = useObservabilityStore((s) => s.fetchErrors);
-  const fetchSpans  = useObservabilityStore((s) => s.fetchSpans);
+  const fetchSpans = useObservabilityStore((s) => s.fetchSpans);
 
   const [activeSubTab, setActiveSubTab] = useState<ObsSubTab>('overview');
 
@@ -331,12 +358,19 @@ export function ObservabilityDashboard() {
       <header className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Observability</p>
+            <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+              Observability
+            </p>
             <h3 className="text-sm font-semibold theme-text-primary">Dashboard</h3>
           </div>
+          <DataSourceBadge
+            tone={dataMode}
+            label={dataMode === 'runtime' ? 'Runtime Metrics' : 'Demo Metrics'}
+            className="shrink-0"
+          />
           <HelpTooltip label="Explain observability dashboard" side="bottom">
-            Aggregated metrics for all LLM provider calls, voice pipeline, and RAG requests.
-            Demo data is shown when the backend observability endpoint is unavailable.
+            Aggregated metrics for all LLM provider calls, voice pipeline, and RAG requests. Demo
+            data is shown when the backend observability endpoint is unavailable.
           </HelpTooltip>
         </div>
         <div className="flex items-center gap-2">
@@ -348,7 +382,11 @@ export function ObservabilityDashboard() {
           )}
           <button
             type="button"
-            onClick={() => { void fetchAll(); void fetchErrors(); void fetchSpans(); }}
+            onClick={() => {
+              void fetchAll();
+              void fetchErrors();
+              void fetchSpans();
+            }}
             disabled={loading}
             title="Refresh observability data"
             className="inline-flex items-center gap-1.5 rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2.5 py-1 text-[10px] theme-text-secondary transition hover:opacity-95 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -387,9 +425,11 @@ export function ObservabilityDashboard() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <KpiCard
               label="Total Tokens"
-              value={summary.totalTokens >= 1_000_000
-                ? `${(summary.totalTokens / 1_000_000).toFixed(2)}M`
-                : `${(summary.totalTokens / 1000).toFixed(1)}K`}
+              value={
+                summary.totalTokens >= 1_000_000
+                  ? `${(summary.totalTokens / 1_000_000).toFixed(2)}M`
+                  : `${(summary.totalTokens / 1000).toFixed(1)}K`
+              }
               Icon={Zap}
               accent="text-sky-400"
             />
@@ -428,7 +468,9 @@ export function ObservabilityDashboard() {
 
           {/* Latency percentiles */}
           <div className="rounded-lg border theme-border theme-bg-primary px-3 py-2.5">
-            <p className="mb-2 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Latency Percentiles</p>
+            <p className="mb-2 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
+              Latency Percentiles
+            </p>
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
                 { label: 'P50', value: summary.p50Ms },
@@ -497,7 +539,7 @@ export function ObservabilityDashboard() {
       {activeSubTab === 'spans' && (
         <div className="space-y-2">
           <p className="text-[10px] theme-text-muted mb-1">
-            Recent OpenTelemetry spans.  Enable OTEL in your AgentOS config to populate this list.
+            Recent OpenTelemetry spans. Enable OTEL in your AgentOS config to populate this list.
           </p>
           {spans.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-lg border theme-border theme-bg-primary py-8 text-center">

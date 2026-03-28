@@ -61,8 +61,8 @@ interface WorkflowUpdateEvent {
 export const ParallelAgencyView: React.FC = () => {
   const [agents, setAgents] = useState<AgentState[]>([
     {
-      id: 'researcher',
-      name: 'Research Specialist',
+      id: 'signals_researcher',
+      name: 'Signals Researcher',
       role: 'Information Gathering',
       status: 'idle',
       progress: 0,
@@ -71,52 +71,31 @@ export const ParallelAgencyView: React.FC = () => {
       avatar: '🔬'
     },
     {
-      id: 'communicator',
-      name: 'Communications Manager',
-      role: 'Content Distribution',
+      id: 'publishing_editor',
+      name: 'Publishing Editor',
+      role: 'Report Drafting',
       status: 'idle',
       progress: 0,
       messages: [],
-      capabilities: ['telegramSendMessage', 'telegramSendPhoto'],
+      capabilities: ['summarization', 'reportDrafting'],
       avatar: '📱'
     }
   ]);
 
   const [workflowTasks, setWorkflowTasks] = useState<WorkflowTask[]>([
     {
-      id: 'search-technical',
-      name: 'Search Technical Info',
-      executor: 'researcher',
+      id: 'gather-signals',
+      name: 'Gather Signals',
+      executor: 'signals_researcher',
       status: 'pending',
       dependencies: []
     },
     {
-      id: 'search-news',
-      name: 'Search Latest News',
-      executor: 'researcher',
+      id: 'draft-update',
+      name: 'Draft Update',
+      executor: 'publishing_editor',
       status: 'pending',
-      dependencies: []
-    },
-    {
-      id: 'fact-check',
-      name: 'Fact Check Claims',
-      executor: 'researcher',
-      status: 'pending',
-      dependencies: ['search-technical', 'search-news']
-    },
-    {
-      id: 'format-report',
-      name: 'Format Report',
-      executor: 'communicator',
-      status: 'pending',
-      dependencies: ['fact-check']
-    },
-    {
-      id: 'send-telegram',
-      name: 'Send to Telegram',
-      executor: 'communicator',
-      status: 'pending',
-      dependencies: ['format-report']
+      dependencies: ['gather-signals']
     }
   ]);
 
@@ -132,8 +111,15 @@ export const ParallelAgencyView: React.FC = () => {
     setWorkflowTasks(tasks => tasks.map(t => ({ ...t, status: 'pending', result: undefined })));
     setAgents(agents => agents.map(a => ({ ...a, status: 'idle', progress: 0, messages: [] })));
     
+    eventSourceRef.current?.close();
+
+    const execution = await agentosClient.startAgencyWorkflow({
+      topic: 'Quantum Computing Breakthroughs',
+      outputFormat: 'markdown'
+    });
+
     // Connect to SSE for real-time updates
-    const eventSource = new EventSource('/api/agentos/agency/workflow/stream');
+    const eventSource = new EventSource(`/api/agentos/agency/workflow/stream?executionId=${encodeURIComponent(execution.executionId)}`);
     eventSourceRef.current = eventSource;
     
     eventSource.onmessage = (event) => {
@@ -141,11 +127,16 @@ export const ParallelAgencyView: React.FC = () => {
       handleWorkflowUpdate(data);
     };
     
-    // Start the workflow
-    await agentosClient.startAgencyWorkflow({
-      topic: 'Quantum Computing Breakthroughs',
-      telegramChannel: '@test_channel'
+    eventSource.addEventListener('done', () => {
+      setIsRunning(false);
+      setWorkflowProgress(100);
+      eventSource.close();
     });
+
+    eventSource.onerror = () => {
+      setIsRunning(false);
+      eventSource.close();
+    };
   };
 
   const handleWorkflowUpdate = (update: WorkflowUpdateEvent) => {
@@ -158,6 +149,19 @@ export const ParallelAgencyView: React.FC = () => {
       case 'task_complete':
         updateTaskStatus(update.taskId, 'complete');
         updateAgentProgress(update.executor, update.progress);
+        if (typeof update.progress === 'number') {
+          setWorkflowProgress(update.progress);
+        }
+        if (update.executor) {
+          updateAgentStatus(update.executor, 'complete');
+        }
+        break;
+
+      case 'task_error':
+        updateTaskStatus(update.taskId, 'error');
+        if (update.executor) {
+          updateAgentStatus(update.executor, 'error');
+        }
         break;
         
       case 'agent_thinking':

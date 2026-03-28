@@ -74,6 +74,7 @@ interface ChatMessage {
   role: MessageRole;
   /** Accumulated text (may grow during streaming). */
   text: string;
+  runtimeMode?: 'live' | 'stub';
   toolCalls?: ToolCallEntry[];
   agentCalls?: AgentCallEntry[];
   usage?: UsageInfo;
@@ -162,6 +163,22 @@ function formatCost(usd: number): string {
   return `$${usd.toFixed(4)}`;
 }
 
+function runtimeModeTone(mode?: 'live' | 'stub'): string {
+  if (mode === 'live') {
+    return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
+  }
+  if (mode === 'stub') {
+    return 'bg-amber-500/15 text-amber-300 border-amber-400/20';
+  }
+  return 'bg-[color:var(--color-background-secondary)] theme-text-muted theme-border';
+}
+
+function runtimeModeLabel(mode?: 'live' | 'stub'): string {
+  if (mode === 'live') return 'Live runtime';
+  if (mode === 'stub') return 'Demo fallback';
+  return 'Unknown mode';
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -222,6 +239,13 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         }`}
       >
         {/* Main text */}
+        {!isUser && msg.runtimeMode && (
+          <div className="mb-1.5">
+            <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.2em] ${runtimeModeTone(msg.runtimeMode)}`}>
+              {runtimeModeLabel(msg.runtimeMode)}
+            </span>
+          </div>
+        )}
         <p className="whitespace-pre-wrap leading-relaxed">
           {msg.text}
           {msg.streaming && (
@@ -426,6 +450,17 @@ export function AgentPlayground() {
       if (!response.ok || !response.body) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+      const responseModeHeader = response.headers.get('X-AgentOS-Playground-Mode');
+      const responseRuntimeMode = responseModeHeader === 'live' || responseModeHeader === 'stub'
+        ? responseModeHeader
+        : undefined;
+      if (responseRuntimeMode) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, runtimeMode: responseRuntimeMode } : m
+          )
+        );
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -489,10 +524,21 @@ export function AgentPlayground() {
             } else if (chunkType === 'done') {
               const usage = chunk.usage as UsageInfo | undefined;
               const latencyMs = typeof chunk.latencyMs === 'number' ? chunk.latencyMs : undefined;
+              const runtimeMode =
+                chunk.runtimeMode === 'live' || chunk.runtimeMode === 'stub'
+                  ? chunk.runtimeMode
+                  : responseRuntimeMode;
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantId
-                    ? { ...m, usage, latencyMs, trace: settings.traceEvents ? traceEvents : undefined, streaming: false }
+                    ? {
+                        ...m,
+                        usage,
+                        latencyMs,
+                        runtimeMode,
+                        trace: settings.traceEvents ? traceEvents : undefined,
+                        streaming: false,
+                      }
                     : m
                 )
               );

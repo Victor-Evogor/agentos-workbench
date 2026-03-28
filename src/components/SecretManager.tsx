@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ShieldCheck, ShieldOff, Save, Trash2 } from "lucide-react";
 import { secretDefinitions } from "@/lib/secretCatalog";
 import { useSecretStore } from "@/state/secretStore";
+import { HelpTooltip } from "./ui/HelpTooltip";
 
 export function SecretManager() {
   const { t } = useTranslation();
@@ -35,12 +36,20 @@ export function SecretManager() {
       aria-label={t("secretManager.sectionLabel", { defaultValue: "Credentials & API Keys" })}
     >
       <header className="mb-4">
-        <p className="text-[10px] uppercase tracking-[0.4em] text-slate-400">
-          {t("secretManager.title", { defaultValue: "Credentials" })}
-        </p>
-        <h3 className="text-lg font-semibold text-white">
-          {t("secretManager.subtitle", { defaultValue: "API keys & plugin secrets" })}
-        </h3>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.4em] text-slate-400">
+              {t("secretManager.title", { defaultValue: "Credentials" })}
+            </p>
+            <h3 className="text-lg font-semibold text-white">
+              {t("secretManager.subtitle", { defaultValue: "API keys & plugin secrets" })}
+            </h3>
+          </div>
+          <HelpTooltip label="Explain secret manager" side="bottom">
+            Store local API keys and integration secrets used by the workbench. Values stay in browser storage and are
+            only sent when a request needs them.
+          </HelpTooltip>
+        </div>
         <p className="mt-1 text-xs text-slate-400">
           {t("secretManager.helpText", {
             defaultValue: "Values are stored locally in your browser and sent only with your requests."
@@ -103,6 +112,7 @@ export function SecretManager() {
                     className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
                     value={draftValue}
                     onChange={(event) => handleChange(definition.id, event.target.value)}
+                    title={`Set or replace the stored value for ${definition.label}.`}
                     autoComplete="off"
                   />
                 </label>
@@ -112,6 +122,7 @@ export function SecretManager() {
                     type="button"
                     className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow shadow-sky-500/30 transition hover:bg-sky-600"
                     onClick={() => handleSave(definition.id)}
+                    title={`Save the current ${definition.label} value.`}
                   >
                     <Save className="h-3 w-3" aria-hidden="true" />
                     {t("secretManager.actions.save", { defaultValue: "Save" })}
@@ -121,6 +132,7 @@ export function SecretManager() {
                     className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-300 transition hover:border-rose-400/40 hover:text-rose-200"
                     onClick={() => removeSecret(definition.id)}
                     disabled={!configured && !draftValue}
+                    title={`Remove the stored ${definition.label} value.`}
                   >
                     <Trash2 className="h-3 w-3" aria-hidden="true" />
                     {t("secretManager.actions.clear", { defaultValue: "Clear" })}

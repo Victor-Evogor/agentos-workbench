@@ -1,5 +1,6 @@
-import { createDatabase, type StorageAdapter } from "@framers/sql-storage-adapter";
+import type { StorageAdapter } from "@framers/sql-storage-adapter/types";
 import type { StateStorage } from "zustand/middleware";
+import { createBrowserSqlStorageAdapter } from "./browserSqlStorage";
 
 /**
  * Key/value table name used for storing persisted Zustand slices.
@@ -10,15 +11,15 @@ let adapterPromise: Promise<StorageAdapter> | null = null;
 let schemaPromise: Promise<void> | null = null;
 
 /**
- * Lazily creates (or reuses) a SQL adapter backed by IndexedDB/sql.js in browsers.
+ * Lazily creates (or reuses) a browser-only SQL adapter backed by IndexedDB/sql.js.
  */
 async function getAdapter(): Promise<StorageAdapter> {
   if (!adapterPromise) {
-    adapterPromise = createDatabase({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      priority: ["indexeddb", "sqljs", "memory"] as any,
-      type: typeof window === "undefined" ? "memory" : undefined
+    const adapter = createBrowserSqlStorageAdapter({
+      dbName: "agentos-state-db",
+      autoSave: true
     });
+    adapterPromise = adapter.open().then(() => adapter);
   }
   const adapter = await adapterPromise;
 

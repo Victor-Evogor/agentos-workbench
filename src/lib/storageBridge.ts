@@ -1,7 +1,7 @@
 import type { AgentSession, PersonaDefinition, SessionEvent } from "@/state/sessionStore";
 import { AgentOSChunkType } from "@/types/agentos";
 import { createAgentOSStorageAdapter } from "./agentosStorage";
-import type { StorageAdapter } from "@framers/sql-storage-adapter";
+import type { StorageAdapter } from "@framers/sql-storage-adapter/types";
 
 const DEFAULT_USER_ID = "agentos-workbench-user";
 const DEFAULT_DB_NAME = "agentos-workbench-db";

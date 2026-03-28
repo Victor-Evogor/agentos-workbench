@@ -15,6 +15,8 @@ import { StorageDashboard } from './StorageDashboard';
 import { SkillBrowser } from './SkillBrowser';
 import { ExtensionManager } from './ExtensionManager';
 import { SecretManager } from './SecretManager';
+import { RuntimeConsole } from './RuntimeConsole';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,11 +37,12 @@ type LimitsPayload = { rpm?: number };
  * Identifiers for the Settings sub-navigation tabs.
  * Ordered to match the visual left-to-right tab strip.
  */
-type SettingsTab = 'llm' | 'guardrails' | 'skills' | 'extensions' | 'secrets' | 'storage';
+type SettingsTab = 'llm' | 'runtime' | 'guardrails' | 'skills' | 'extensions' | 'secrets' | 'storage';
 
 /** Ordered tab definitions for rendering the sub-nav strip. */
 const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: 'llm',        label: 'LLM'        },
+  { id: 'runtime',    label: 'Runtime'    },
   { id: 'guardrails', label: 'Guardrails' },
   { id: 'skills',     label: 'Skills'     },
   { id: 'extensions', label: 'Extensions' },
@@ -129,15 +132,22 @@ export function SettingsPanel() {
     <section className="rounded-xl border theme-border theme-bg-secondary-soft p-3 transition-theme">
       {/* Header row — title + Save button (only relevant on LLM tab) */}
       <header className="mb-3 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Settings</p>
-          <h3 className="text-sm font-semibold theme-text-primary">Agent configuration</h3>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Settings</p>
+            <h3 className="text-sm font-semibold theme-text-primary">Agent configuration</h3>
+          </div>
+          <HelpTooltip label="Explain settings panel" side="bottom">
+            Configure provider defaults, inspect runtime wiring, and manage guardrails, skills, extensions,
+            secrets, and local browser storage from one place.
+          </HelpTooltip>
         </div>
         {activeTab === 'llm' && (
           <button
             type="button"
             onClick={onSave}
             disabled={saving}
+            title="Save the current provider keys, model defaults, and local rate-limit settings."
             className="rounded-full theme-bg-accent px-3 py-1 text-xs font-semibold theme-text-on-accent disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save'}
@@ -152,6 +162,7 @@ export function SettingsPanel() {
             key={id}
             type="button"
             onClick={() => setActiveTab(id)}
+            title={`Open the ${label} settings section.`}
             className={[
               'shrink-0 rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors',
               activeTab === id
@@ -185,6 +196,7 @@ export function SettingsPanel() {
                     placeholder={mask.openai || 'sk-…'}
                     value={form.openaiKey}
                     onChange={(e) => setForm((f) => ({ ...f, openaiKey: e.target.value }))}
+                    title="Set or replace the OpenAI API key stored for this workbench."
                     className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                   />
                 </label>
@@ -194,6 +206,7 @@ export function SettingsPanel() {
                     placeholder="gpt-4o-mini"
                     value={form.openaiModel}
                     onChange={(e) => setForm((f) => ({ ...f, openaiModel: e.target.value }))}
+                    title="Choose the default OpenAI model used when a request does not override it."
                     className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                   />
                 </label>
@@ -209,6 +222,7 @@ export function SettingsPanel() {
                     placeholder={mask.anthropic || 'sk-ant-…'}
                     value={form.anthropicKey}
                     onChange={(e) => setForm((f) => ({ ...f, anthropicKey: e.target.value }))}
+                    title="Set or replace the Anthropic API key stored for this workbench."
                     className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                   />
                 </label>
@@ -218,6 +232,7 @@ export function SettingsPanel() {
                     placeholder="claude-3-5-sonnet"
                     value={form.anthropicModel}
                     onChange={(e) => setForm((f) => ({ ...f, anthropicModel: e.target.value }))}
+                    title="Choose the default Anthropic model used when a request does not override it."
                     className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                   />
                 </label>
@@ -233,6 +248,7 @@ export function SettingsPanel() {
                   placeholder="Optional (UI only)"
                   value={form.rpm}
                   onChange={(e) => setForm((f) => ({ ...f, rpm: e.target.value }))}
+                  title="Record a preferred requests-per-minute ceiling for local workbench usage."
                   className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                 />
               </label>
@@ -243,6 +259,8 @@ export function SettingsPanel() {
           </div>
         )
       )}
+
+      {activeTab === 'runtime' && <RuntimeConsole />}
 
       {/* Guardrails — 5-pack AgentOS extension system */}
       {activeTab === 'guardrails' && (

@@ -1,6 +1,14 @@
 import { useEffect } from 'react';
-import { Brain, Database, Cog, Gauge } from 'lucide-react';
-import { useMemoryStore } from '@/state/memoryStore';
+import { Brain, Database, Cog, Gauge, RefreshCw } from 'lucide-react';
+import {
+  deriveMemorySurfaceTone,
+  describeMemoryLoadedAt,
+  describeMemoryLoadedAtAriaLabel,
+  describeMemoryLoadedAtTitle,
+  useMemoryStore,
+} from '@/state/memoryStore';
+import { DataSourceBadge } from './DataSourceBadge';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,7 +22,7 @@ import { useMemoryStore } from '@/state/memoryStore';
  */
 function healthDotClass(pct: number): string {
   if (pct > 0.95) return 'bg-red-500';
-  if (pct > 0.80) return 'bg-yellow-400';
+  if (pct > 0.8) return 'bg-yellow-400';
   return 'bg-green-500';
 }
 
@@ -25,7 +33,7 @@ function healthDotClass(pct: number): string {
  */
 function healthLabel(pct: number): string {
   if (pct > 0.95) return 'At capacity';
-  if (pct > 0.80) return 'Near capacity';
+  if (pct > 0.8) return 'Near capacity';
   return 'Healthy';
 }
 
@@ -57,7 +65,9 @@ function TierCard({ icon, label, count, accentClass = 'text-accent', children }:
     <div className="rounded-lg border theme-border theme-bg-secondary p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <span className={accentClass}>{icon}</span>
-        <span className="text-xs font-semibold theme-text-primary uppercase tracking-wide">{label}</span>
+        <span className="text-xs font-semibold theme-text-primary uppercase tracking-wide">
+          {label}
+        </span>
       </div>
       {count !== undefined ? (
         <span className="text-2xl font-bold theme-text-primary">{count}</span>
@@ -82,7 +92,18 @@ function TierCard({ icon, label, count, accentClass = 'text-accent', children }:
  * Data is fetched from the backend on mount via {@link useMemoryStore}.
  */
 export function MemoryOverview() {
-  const { stats, working, fetchStats, fetchWorking, loading } = useMemoryStore();
+  const {
+    stats,
+    statsMode,
+    working,
+    workingMode,
+    fetchStats,
+    fetchWorking,
+    statsLoading,
+    workingLoading,
+    statsLoadedAt,
+    workingLoadedAt,
+  } = useMemoryStore();
 
   /** Fetch stats and working memory snapshot when the panel is first displayed. */
   useEffect(() => {
@@ -90,32 +111,74 @@ export function MemoryOverview() {
     fetchWorking();
   }, [fetchStats, fetchWorking]);
 
-  const episodicCount  = (stats?.episodic  as { count?: number } | undefined)?.count;
-  const semanticCount  = (stats?.semantic  as { count?: number } | undefined)?.count;
-  const proceduralCount = (stats?.procedural as { count?: number } | undefined)?.count;
-  const tokens    = (working?.tokens    as number | undefined) ?? 0;
-  const maxTokens = (working?.maxTokens as number | undefined) ?? 1;
-  const tokenPct  = Math.min(tokens / maxTokens, 1);
-  const summary   = (working?.rollingSummary as string | undefined) ?? '';
+  const episodicCount = stats?.episodic?.count;
+  const semanticCount = stats?.semantic?.count;
+  const proceduralCount = stats?.procedural?.count;
+  const tokens = working?.tokens ?? 0;
+  const maxTokens = working?.maxTokens ?? 1;
+  const tokenPct = Math.min(tokens / maxTokens, 1);
+  const summary = working?.rollingSummary ?? '';
+  const slotCount = working?.slotCount;
+  const slotCapacity = working?.slotCapacity;
+  const strategy = working?.strategy;
 
-  /**
-   * Whether the backend is serving live data from the AgentOS runtime
-   * or falling back to mock demonstration data.
-   */
-  const isConnected = Boolean(stats?.connected) || Boolean(working?.connected);
+  const tone = deriveMemorySurfaceTone([statsMode, workingMode]);
+  const overviewLoading = statsLoading || workingLoading;
+  const toneLabel =
+    tone === 'runtime'
+      ? 'Runtime Overview'
+      : tone === 'mixed'
+        ? 'Mixed Overview'
+        : tone === 'demo'
+          ? 'Demo Overview'
+          : 'Overview Checking';
+  const activeSessions = stats?.working?.activeSessions ?? working?.activeSessions;
+  const lastOverviewLoadedAt =
+    statsLoadedAt && workingLoadedAt
+      ? Math.max(statsLoadedAt, workingLoadedAt)
+      : (statsLoadedAt ?? workingLoadedAt ?? null);
+  const refreshOverview = () => {
+    void fetchStats({ force: true });
+    void fetchWorking({ force: true });
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Data source badge */}
       <div className="flex items-center gap-2">
-        <span
-          className={`inline-block h-2 w-2 rounded-full ${
-            isConnected ? 'bg-emerald-500' : 'bg-amber-400'
-          }`}
+        <DataSourceBadge
+          tone={tone}
+          label={toneLabel}
+          accessibleLabel={`Memory overview data source: ${toneLabel}`}
         />
-        <span className="text-xs font-medium theme-text-secondary">
-          {isConnected ? 'Live Data' : 'Mock Data'}
+        <span
+          className="text-[10px] theme-text-secondary"
+          title={describeMemoryLoadedAtTitle(lastOverviewLoadedAt)}
+          role="status"
+          aria-live="polite"
+          aria-label={describeMemoryLoadedAtAriaLabel(lastOverviewLoadedAt)}
+        >
+          {describeMemoryLoadedAt(lastOverviewLoadedAt)}
         </span>
+        <HelpTooltip label="Explain memory overview" side="bottom">
+          Compare the current health and size of each memory tier at a glance, including
+          working-memory saturation and recent rolling-summary pressure.
+        </HelpTooltip>
+        <button
+          type="button"
+          onClick={refreshOverview}
+          disabled={overviewLoading}
+          aria-busy={overviewLoading}
+          aria-label={overviewLoading ? 'Refreshing memory overview' : 'Refresh memory overview'}
+          title="Refresh overview stats and working memory from the backend."
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2.5 py-1 text-[10px] theme-text-secondary transition hover:opacity-95 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <RefreshCw
+            size={10}
+            className={overviewLoading ? 'animate-spin' : ''}
+            aria-hidden="true"
+          />
+          {overviewLoading ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
       {/* 2x2 summary grid */}
@@ -150,18 +213,16 @@ export function MemoryOverview() {
               <span className="text-xs theme-text-secondary">
                 {tokens.toLocaleString()} / {maxTokens.toLocaleString()} tokens
               </span>
-              <span className="text-xs theme-text-secondary">
-                {Math.round(tokenPct * 100)}%
-              </span>
+              <span className="text-xs theme-text-secondary">{Math.round(tokenPct * 100)}%</span>
             </div>
             <div className="h-1.5 rounded-full theme-bg-primary overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   tokenPct > 0.95
                     ? 'bg-red-500'
-                    : tokenPct > 0.80
-                    ? 'bg-yellow-400'
-                    : 'bg-emerald-500'
+                    : tokenPct > 0.8
+                      ? 'bg-yellow-400'
+                      : 'bg-emerald-500'
                 }`}
                 style={{ width: `${tokenPct * 100}%` }}
               />
@@ -172,6 +233,21 @@ export function MemoryOverview() {
                 {summary.length > 100 ? `${summary.slice(0, 100)}…` : summary}
               </p>
             )}
+            {(slotCount !== undefined || strategy) && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {slotCount !== undefined && (
+                  <span className="rounded-full border theme-border px-1.5 py-0.5 text-[10px] theme-text-secondary">
+                    Slots {slotCount}
+                    {slotCapacity ? `/${slotCapacity}` : ''}
+                  </span>
+                )}
+                {strategy && (
+                  <span className="rounded-full border theme-border px-1.5 py-0.5 text-[10px] theme-text-secondary">
+                    {strategy}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </TierCard>
       </div>
@@ -181,7 +257,11 @@ export function MemoryOverview() {
         <span className={`inline-block h-2.5 w-2.5 rounded-full ${healthDotClass(tokenPct)}`} />
         <span className="text-xs theme-text-primary font-medium">{healthLabel(tokenPct)}</span>
         <span className="text-xs theme-text-secondary ml-auto">
-          {loading ? 'Refreshing…' : 'Context window health'}
+          {overviewLoading
+            ? 'Refreshing…'
+            : activeSessions
+              ? `${activeSessions} active session${activeSessions === 1 ? '' : 's'}`
+              : 'Context window health'}
         </span>
       </div>
     </div>

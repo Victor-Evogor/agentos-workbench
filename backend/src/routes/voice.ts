@@ -22,7 +22,7 @@
  *   Telephony: Twilio, Telnyx, Plivo
  */
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 
 // ---------------------------------------------------------------------------
@@ -43,27 +43,35 @@ interface VoiceProviderEntry {
   envVar: string;
 }
 
+type VoiceWorkbenchMode = 'mixed' | 'demo';
+
+const VOICE_WORKBENCH_MODE_HEADER = 'X-AgentOS-Workbench-Mode';
+
+function setVoiceMode(reply: FastifyReply, mode: VoiceWorkbenchMode): void {
+  reply.header(VOICE_WORKBENCH_MODE_HEADER, mode);
+}
+
 /** STT provider catalog — ordered by preference / popularity. */
 const STT_PROVIDERS: Omit<VoiceProviderEntry, 'configured'>[] = [
-  { id: 'deepgram',   name: 'Deepgram',   envVar: 'DEEPGRAM_API_KEY'   },
-  { id: 'openai-stt', name: 'OpenAI STT', envVar: 'OPENAI_API_KEY'     },
+  { id: 'deepgram', name: 'Deepgram', envVar: 'DEEPGRAM_API_KEY' },
+  { id: 'openai-stt', name: 'OpenAI STT', envVar: 'OPENAI_API_KEY' },
   { id: 'assemblyai', name: 'AssemblyAI', envVar: 'ASSEMBLYAI_API_KEY' },
-  { id: 'whisper',    name: 'Whisper',    envVar: 'OPENAI_API_KEY'     },
+  { id: 'whisper', name: 'Whisper', envVar: 'OPENAI_API_KEY' },
 ];
 
 /** TTS provider catalog. */
 const TTS_PROVIDERS: Omit<VoiceProviderEntry, 'configured'>[] = [
   { id: 'elevenlabs', name: 'ElevenLabs', envVar: 'ELEVENLABS_API_KEY' },
-  { id: 'openai-tts', name: 'OpenAI TTS', envVar: 'OPENAI_API_KEY'    },
-  { id: 'cartesia',   name: 'Cartesia',   envVar: 'CARTESIA_API_KEY'   },
-  { id: 'playht',     name: 'PlayHT',     envVar: 'PLAYHT_API_KEY'     },
+  { id: 'openai-tts', name: 'OpenAI TTS', envVar: 'OPENAI_API_KEY' },
+  { id: 'cartesia', name: 'Cartesia', envVar: 'CARTESIA_API_KEY' },
+  { id: 'playht', name: 'PlayHT', envVar: 'PLAYHT_API_KEY' },
 ];
 
 /** Telephony provider catalog. */
 const TELEPHONY_PROVIDERS: Omit<VoiceProviderEntry, 'configured'>[] = [
   { id: 'twilio', name: 'Twilio', envVar: 'TWILIO_ACCOUNT_SID' },
-  { id: 'telnyx', name: 'Telnyx', envVar: 'TELNYX_API_KEY'     },
-  { id: 'plivo',  name: 'Plivo',  envVar: 'PLIVO_AUTH_ID'      },
+  { id: 'telnyx', name: 'Telnyx', envVar: 'TELNYX_API_KEY' },
+  { id: 'plivo', name: 'Plivo', envVar: 'PLIVO_AUTH_ID' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -75,9 +83,7 @@ const TELEPHONY_PROVIDERS: Omit<VoiceProviderEntry, 'configured'>[] = [
  * checking whether the corresponding env var is present and non-empty in
  * `process.env`.
  */
-function resolveProviders(
-  catalog: Omit<VoiceProviderEntry, 'configured'>[],
-): VoiceProviderEntry[] {
+function resolveProviders(catalog: Omit<VoiceProviderEntry, 'configured'>[]): VoiceProviderEntry[] {
   return catalog.map((entry) => ({
     ...entry,
     configured: Boolean(process.env[entry.envVar]?.trim()),
@@ -103,101 +109,108 @@ export default async function voiceRoutes(fastify: FastifyInstance): Promise<voi
    * empty; a running Wunderland voice runtime can push updates via its own
    * mechanism in the future.
    */
-  fastify.get('/status', {
-    schema: {
-      description: 'Return voice pipeline provider configuration status and active sessions',
-      tags: ['Voice'],
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            providers: {
-              type: 'object',
-              properties: {
-                stt: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      id:         { type: 'string' },
-                      name:       { type: 'string' },
-                      configured: { type: 'boolean' },
-                      envVar:     { type: 'string' },
-                    },
-                    required: ['id', 'name', 'configured', 'envVar'],
-                  },
-                },
-                tts: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      id:         { type: 'string' },
-                      name:       { type: 'string' },
-                      configured: { type: 'boolean' },
-                      envVar:     { type: 'string' },
-                    },
-                    required: ['id', 'name', 'configured', 'envVar'],
-                  },
-                },
-                telephony: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      id:         { type: 'string' },
-                      name:       { type: 'string' },
-                      configured: { type: 'boolean' },
-                      envVar:     { type: 'string' },
-                    },
-                    required: ['id', 'name', 'configured', 'envVar'],
-                  },
-                },
-              },
-              required: ['stt', 'tts', 'telephony'],
-            },
-            sessions: {
-              type: 'array',
-              description: 'Active voice pipeline sessions reported by the runtime.',
-              items: {
+  fastify.get(
+    '/status',
+    {
+      schema: {
+        description: 'Return voice pipeline provider configuration status and active sessions',
+        tags: ['Voice'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              providers: {
                 type: 'object',
                 properties: {
-                  id:       { type: 'string' },
-                  state:    { type: 'string' },
-                  turns:    { type: 'number' },
-                  duration: { type: 'number' },
-                  transcript: {
+                  stt: {
                     type: 'array',
                     items: {
                       type: 'object',
                       properties: {
-                        speaker: { type: 'string' },
-                        text:    { type: 'string' },
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        configured: { type: 'boolean' },
+                        envVar: { type: 'string' },
                       },
-                      required: ['speaker', 'text'],
+                      required: ['id', 'name', 'configured', 'envVar'],
+                    },
+                  },
+                  tts: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        configured: { type: 'boolean' },
+                        envVar: { type: 'string' },
+                      },
+                      required: ['id', 'name', 'configured', 'envVar'],
+                    },
+                  },
+                  telephony: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        configured: { type: 'boolean' },
+                        envVar: { type: 'string' },
+                      },
+                      required: ['id', 'name', 'configured', 'envVar'],
                     },
                   },
                 },
-                required: ['id', 'state', 'turns', 'duration', 'transcript'],
+                required: ['stt', 'tts', 'telephony'],
+              },
+              sessions: {
+                type: 'array',
+                description: 'Active voice pipeline sessions reported by the runtime.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    state: { type: 'string' },
+                    turns: { type: 'number' },
+                    duration: { type: 'number' },
+                    transcript: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          speaker: { type: 'string' },
+                          text: { type: 'string' },
+                        },
+                        required: ['speaker', 'text'],
+                      },
+                    },
+                  },
+                  required: ['id', 'state', 'turns', 'duration', 'transcript'],
+                },
               },
             },
+            required: ['mode', 'providers', 'sessions'],
           },
-          required: ['providers', 'sessions'],
         },
       },
     },
-  }, async () => {
-    return {
-      providers: {
-        stt:       resolveProviders(STT_PROVIDERS),
-        tts:       resolveProviders(TTS_PROVIDERS),
-        telephony: resolveProviders(TELEPHONY_PROVIDERS),
-      },
-      // Active sessions are populated by a live Wunderland voice runtime.
-      // The workbench backend exposes an empty list by default.
-      sessions: [],
-    };
-  });
+    async (_request, reply) => {
+      setVoiceMode(reply, 'mixed');
+      return {
+        mode: 'mixed' as const,
+        providers: {
+          stt: resolveProviders(STT_PROVIDERS),
+          tts: resolveProviders(TTS_PROVIDERS),
+          telephony: resolveProviders(TELEPHONY_PROVIDERS),
+        },
+        // Active sessions are populated by a live Wunderland voice runtime.
+        // The workbench backend exposes an empty list by default.
+        sessions: [],
+      };
+    }
+  );
 
   // ---------------------------------------------------------------------------
   // Call history routes
@@ -248,14 +261,43 @@ export default async function voiceRoutes(fastify: FastifyInstance): Promise<voi
   ];
 
   const DEMO_TRANSCRIPT = [
-    { speaker: 'Caller', text: 'Hi, I need help resetting my password.',                         timestamp: new Date(NOW - 4 * 60_000).toISOString()   },
-    { speaker: 'Agent',  text: 'Sure! I can help you with that. Can you confirm your email?',    timestamp: new Date(NOW - 3.8 * 60_000).toISOString() },
-    { speaker: 'Caller', text: "Yes it's user@example.com",                                      timestamp: new Date(NOW - 3.5 * 60_000).toISOString() },
-    { speaker: 'Agent',  text: "Thank you. I'll send a reset link to that address now.",         timestamp: new Date(NOW - 3.2 * 60_000).toISOString() },
-    { speaker: 'Caller', text: 'Oh wait — actually',                                             timestamp: new Date(NOW - 3 * 60_000).toISOString(),    bargedIn: true },
-    { speaker: 'Agent',  text: 'Go ahead.',                                                      timestamp: new Date(NOW - 2.9 * 60_000).toISOString() },
-    { speaker: 'Caller', text: "I think the email might be different. Let me check.",            timestamp: new Date(NOW - 2.7 * 60_000).toISOString() },
-    { speaker: 'Agent',  text: "Take your time, I'm here whenever you're ready.",                timestamp: new Date(NOW - 2.5 * 60_000).toISOString() },
+    {
+      speaker: 'Caller',
+      text: 'Hi, I need help resetting my password.',
+      timestamp: new Date(NOW - 4 * 60_000).toISOString(),
+    },
+    {
+      speaker: 'Agent',
+      text: 'Sure! I can help you with that. Can you confirm your email?',
+      timestamp: new Date(NOW - 3.8 * 60_000).toISOString(),
+    },
+    {
+      speaker: 'Caller',
+      text: "Yes it's user@example.com",
+      timestamp: new Date(NOW - 3.5 * 60_000).toISOString(),
+    },
+    {
+      speaker: 'Agent',
+      text: "Thank you. I'll send a reset link to that address now.",
+      timestamp: new Date(NOW - 3.2 * 60_000).toISOString(),
+    },
+    {
+      speaker: 'Caller',
+      text: 'Oh wait — actually',
+      timestamp: new Date(NOW - 3 * 60_000).toISOString(),
+      bargedIn: true,
+    },
+    { speaker: 'Agent', text: 'Go ahead.', timestamp: new Date(NOW - 2.9 * 60_000).toISOString() },
+    {
+      speaker: 'Caller',
+      text: 'I think the email might be different. Let me check.',
+      timestamp: new Date(NOW - 2.7 * 60_000).toISOString(),
+    },
+    {
+      speaker: 'Agent',
+      text: "Take your time, I'm here whenever you're ready.",
+      timestamp: new Date(NOW - 2.5 * 60_000).toISOString(),
+    },
   ];
 
   /**
@@ -263,51 +305,65 @@ export default async function voiceRoutes(fastify: FastifyInstance): Promise<voi
    *
    * Returns a list of historical voice calls ordered newest-first.
    */
-  fastify.get('/calls', {
-    schema: {
-      description: 'Return historical voice call records',
-      tags: ['Voice'],
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            calls: { type: 'array', items: { type: 'object', additionalProperties: true } },
+  fastify.get(
+    '/calls',
+    {
+      schema: {
+        description: 'Return historical voice call records',
+        tags: ['Voice'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              calls: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+            required: ['mode', 'calls'],
           },
         },
       },
     },
-  }, async () => {
-    return { calls: DEMO_CALLS };
-  });
+    async (_request, reply) => {
+      setVoiceMode(reply, 'demo');
+      return { mode: 'demo' as const, calls: DEMO_CALLS };
+    }
+  );
 
   /**
    * GET /api/voice/calls/:id/transcript
    *
    * Returns the full timestamped transcript for a specific call.
    */
-  fastify.get<{ Params: { id: string } }>('/calls/:id/transcript', {
-    schema: {
-      description: 'Return the full transcript for a specific voice call',
-      tags: ['Voice'],
-      params: {
-        type: 'object',
-        properties: { id: { type: 'string' } },
-        required: ['id'],
-      },
-      response: {
-        200: {
+  fastify.get<{ Params: { id: string } }>(
+    '/calls/:id/transcript',
+    {
+      schema: {
+        description: 'Return the full transcript for a specific voice call',
+        tags: ['Voice'],
+        params: {
           type: 'object',
-          properties: {
-            transcript: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              transcript: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+            required: ['mode', 'transcript'],
           },
         },
       },
     },
-  }, async (request) => {
-    // In demo mode all calls share the same transcript.  The id is acknowledged
-    // so the route signature is correct for a real implementation.
-    void request.params.id;
-    void crypto; // referenced to keep the import used
-    return { transcript: DEMO_TRANSCRIPT };
-  });
+    async (request, reply) => {
+      // In demo mode all calls share the same transcript.  The id is acknowledged
+      // so the route signature is correct for a real implementation.
+      void request.params.id;
+      void crypto; // referenced to keep the import used
+      setVoiceMode(reply, 'demo');
+      return { mode: 'demo' as const, transcript: DEMO_TRANSCRIPT };
+    }
+  );
 }

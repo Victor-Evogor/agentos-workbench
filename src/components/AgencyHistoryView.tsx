@@ -22,6 +22,7 @@ import {
   type AgencyExecutionRecord,
   type AgencySeatRecord,
 } from '../lib/agentosClient';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
   const [executions, setExecutions] = useState<AgencyExecutionRecord[]>([]);
@@ -123,6 +124,10 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
         <div className="flex items-center space-x-2">
           <History className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-bold theme-text-primary">Execution History</h2>
+          <HelpTooltip label="Explain agency history" side="bottom">
+            Review completed or running agency executions, expand them to inspect seat outputs, and compare cost,
+            duration, and emergent task decomposition after the fact.
+          </HelpTooltip>
         </div>
         <Badge variant="secondary" size="xs">{executions.length} total</Badge>
       </div>
@@ -148,6 +153,7 @@ export const AgencyHistoryView: React.FC<{ userId: string }> = ({ userId }) => {
               <div
                 className="p-3 cursor-pointer hover:bg-accent/5 transition-colors"
                 onClick={() => toggleExpand(execution.agencyId)}
+                title={`${isExpanded ? 'Collapse' : 'Expand'} execution details for ${execution.goal || execution.agencyId}.`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">

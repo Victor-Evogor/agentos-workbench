@@ -100,6 +100,7 @@ export function SkillCard({ skill, onToggle, onSelect }: SkillCardProps) {
       role="button"
       tabIndex={0}
       aria-label={`View details for ${skill.name}`}
+      title={`Open details for ${skill.displayName}.`}
       onClick={() => onSelect(skill.name)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') onSelect(skill.name);
@@ -202,6 +203,7 @@ export function SkillCard({ skill, onToggle, onSelect }: SkillCardProps) {
           role="switch"
           aria-checked={skill.enabled}
           aria-label={`${skill.enabled ? 'Disable' : 'Enable'} ${skill.name}`}
+          title={`${skill.enabled ? 'Disable' : 'Enable'} ${skill.displayName}.`}
           onClick={(e) => {
             e.stopPropagation();
             onToggle(skill.name, !skill.enabled);

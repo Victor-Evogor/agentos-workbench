@@ -11,7 +11,7 @@
  *   - Cost Trend      — 7-day bar chart of daily token spend
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -27,6 +27,7 @@ import {
   Phone,
   Plus,
   RefreshCw,
+  Store,
   TrendingUp,
   Users,
   XCircle,
@@ -37,8 +38,10 @@ import { useHitlStore } from '@/state/hitlStore';
 import { useVoiceCallStore } from '@/state/voiceCallStore';
 import { useTelemetryStore } from '@/state/telemetryStore';
 import { useEventBus } from '@/hooks/useEventBus';
-import { resolveWorkbenchApiBaseUrl } from '@/lib/agentosClient';
+import type { RuntimeStatusResponse } from '@/lib/agentosClient';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
+import type { WorkbenchDataMode, WorkbenchWorkspaceStatus } from '@/lib/workbenchStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +53,7 @@ interface ActivityItem {
   label: string;
   detail?: string;
   timestamp: number;
+  sourceMode: WorkbenchDataMode;
   /** Navigation target when the item is clicked. */
   navKey?: string;
 }
@@ -96,6 +100,30 @@ const ACTIVITY_COLOR: Record<ActivityItem['type'], string> = {
   voice: 'text-teal-400',
 };
 
+function resolveEventSourceMode(data: unknown): WorkbenchDataMode {
+  const sourceMode = (data as { sourceMode?: unknown } | null)?.sourceMode;
+  return sourceMode === 'runtime' ||
+    sourceMode === 'mixed' ||
+    sourceMode === 'demo' ||
+    sourceMode === 'local'
+    ? sourceMode
+    : 'runtime';
+}
+
+function activitySourceLabel(sourceMode: WorkbenchDataMode): string {
+  switch (sourceMode) {
+    case 'runtime':
+      return 'Runtime';
+    case 'mixed':
+      return 'Mixed';
+    case 'local':
+      return 'Local';
+    case 'demo':
+    default:
+      return 'Demo';
+  }
+}
+
 /** Generate stable demo cost trend data for the last 7 days. */
 function buildDemoCostTrend(): CostDay[] {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -132,7 +160,9 @@ function KpiCard({ icon, label, value, sub, alert, onClick }: KpiCardProps) {
       <div className="flex items-center gap-2">
         <div
           className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-            alert ? 'bg-rose-500/15 text-rose-400' : 'bg-[color:var(--color-background-secondary)] theme-text-muted'
+            alert
+              ? 'bg-rose-500/15 text-rose-400'
+              : 'bg-[color:var(--color-background-secondary)] theme-text-muted'
           }`}
         >
           {icon}
@@ -165,7 +195,11 @@ function CostTrendChart({ days }: { days: CostDay[] }) {
         const pct = day.tokens / maxTokens;
         const isToday = i === days.length - 1;
         return (
-          <div key={day.label} className="flex flex-1 flex-col items-center gap-1" title={`${day.tokens.toLocaleString()} tok — $${day.costUsd.toFixed(4)}`}>
+          <div
+            key={day.label}
+            className="flex flex-1 flex-col items-center gap-1"
+            title={`${day.tokens.toLocaleString()} tok — $${day.costUsd.toFixed(4)}`}
+          >
             <div
               className={`w-full rounded-t-sm transition-all duration-300 ${
                 isToday
@@ -174,7 +208,9 @@ function CostTrendChart({ days }: { days: CostDay[] }) {
               }`}
               style={{ height: `${Math.max(pct * 80, 4)}px` }}
             />
-            <span className={`text-[9px] ${isToday ? 'theme-text-primary font-semibold' : 'theme-text-muted'}`}>
+            <span
+              className={`text-[9px] ${isToday ? 'theme-text-primary font-semibold' : 'theme-text-muted'}`}
+            >
               {day.label}
             </span>
           </div>
@@ -191,7 +227,20 @@ function CostTrendChart({ days }: { days: CostDay[] }) {
 interface HomeDashboardProps {
   /** Called when the user clicks a quick-action nav item. */
   onNavigate: (tabKey: string) => void;
+  runtimeStatus: RuntimeStatusResponse | null | undefined;
+  runtimeStatusLoading: boolean;
+  workspaceStatus: WorkbenchWorkspaceStatus;
+  sampleWorkspaceMode: 'sample' | 'clean' | null;
+  onManageSampleWorkspace: () => void;
 }
+
+const KNOWN_PROVIDERS = [
+  { id: 'openai', name: 'OpenAI' },
+  { id: 'anthropic', name: 'Anthropic' },
+  { id: 'google', name: 'Google' },
+  { id: 'openrouter', name: 'OpenRouter' },
+  { id: 'ollama', name: 'Ollama' },
+];
 
 /**
  * HomeDashboard — landing page shown when the workbench first opens.
@@ -199,20 +248,25 @@ interface HomeDashboardProps {
  * Wires into existing Zustand stores for live KPI data and subscribes to
  * the event bus for the activity feed.
  */
-export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
+export function HomeDashboard({
+  onNavigate,
+  runtimeStatus,
+  runtimeStatusLoading,
+  workspaceStatus,
+  sampleWorkspaceMode,
+  onManageSampleWorkspace,
+}: HomeDashboardProps) {
   const agencies = useSessionStore((s) => s.agencies);
   const hitlPending = useHitlStore((s) => s.pending);
   const hitlLoading = useHitlStore((s) => s.loading);
   const fetchHitlPending = useHitlStore((s) => s.fetchPending);
-  const activeCalls = useVoiceCallStore((s) => s.calls.filter((c) => !c.durationSeconds));
+  const activeCallCount = useVoiceCallStore(
+    (s) => s.calls.filter((c) => !c.durationSeconds).length
+  );
   const perSession = useTelemetryStore((s) => s.perSession);
 
   // Activity feed
   const [activity, setActivity] = useState<ActivityItem[]>([]);
-
-  // Provider statuses (fetched once)
-  const [providers, setProviders] = useState<ProviderStatus[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(true);
 
   // Cost trend (demo data until real API is wired)
   const [costDays] = useState<CostDay[]>(buildDemoCostTrend);
@@ -230,10 +284,16 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
 
   // Push an activity item (capped at 50 items)
   const pushActivity = useCallback((item: Omit<ActivityItem, 'id' | 'timestamp'>) => {
-    setActivity((prev) => [
-      { ...item, id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, timestamp: Date.now() },
-      ...prev,
-    ].slice(0, 50));
+    setActivity((prev) =>
+      [
+        {
+          ...item,
+          id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: Date.now(),
+        },
+        ...prev,
+      ].slice(0, 50)
+    );
   }, []);
 
   // Subscribe to real-time events
@@ -242,7 +302,13 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'hitl', label: 'HITL approval needed', detail: String(d?.action ?? ''), navKey: 'hitl' });
+        pushActivity({
+          type: 'hitl',
+          label: 'HITL approval needed',
+          detail: String(d?.action ?? ''),
+          navKey: 'hitl',
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -252,7 +318,13 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'verdict', label: 'Tool forge verdict', detail: String(d?.toolName ?? ''), navKey: 'tool-forge' });
+        pushActivity({
+          type: 'verdict',
+          label: 'Tool forge verdict',
+          detail: String(d?.toolName ?? ''),
+          navKey: 'tool-forge',
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -262,7 +334,13 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'channel', label: `${String(d?.channel ?? 'Channel')} message`, detail: String(d?.text ?? '').slice(0, 60), navKey: 'channels' });
+        pushActivity({
+          type: 'channel',
+          label: `${String(d?.channel ?? 'Channel')} message`,
+          detail: String(d?.text ?? '').slice(0, 60),
+          navKey: 'channels',
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -272,7 +350,12 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'run', label: `Agent started: ${String(d?.agentId ?? '')}`, navKey: 'agency' });
+        pushActivity({
+          type: 'run',
+          label: `Agent started: ${String(d?.agentId ?? '')}`,
+          navKey: 'agency',
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -282,7 +365,12 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'run', label: `Agent finished: ${String(d?.agentId ?? '')}`, navKey: 'agency' });
+        pushActivity({
+          type: 'run',
+          label: `Agent finished: ${String(d?.agentId ?? '')}`,
+          navKey: 'agency',
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -292,7 +380,13 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'voice', label: 'Voice transcript', detail: String(d?.text ?? '').slice(0, 60), navKey: 'call-monitor' });
+        pushActivity({
+          type: 'voice',
+          label: 'Voice transcript',
+          detail: String(d?.text ?? '').slice(0, 60),
+          navKey: 'call-monitor',
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -302,7 +396,12 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     useCallback(
       (data: unknown) => {
         const d = data as Record<string, unknown>;
-        pushActivity({ type: 'error', label: 'Error', detail: String(d?.message ?? '') });
+        pushActivity({
+          type: 'error',
+          label: 'Error',
+          detail: String(d?.message ?? ''),
+          sourceMode: resolveEventSourceMode(d),
+        });
       },
       [pushActivity]
     )
@@ -313,50 +412,15 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     void fetchHitlPending();
   }, [fetchHitlPending]);
 
-  // Fetch provider statuses
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const baseUrl = (() => {
-          try { return resolveWorkbenchApiBaseUrl(); } catch { return ''; }
-        })();
-        const res = await fetch(`${baseUrl}/api/system/status`);
-        if (!res.ok) throw new Error('Non-OK');
-        const json = await res.json() as {
-          providers?: { configured?: string[]; defaultProvider?: string | null };
-        };
-        const configured = json?.providers?.configured ?? [];
-        const KNOWN_PROVIDERS = [
-          { id: 'openai', name: 'OpenAI' },
-          { id: 'anthropic', name: 'Anthropic' },
-          { id: 'google', name: 'Google' },
-          { id: 'openrouter', name: 'OpenRouter' },
-          { id: 'ollama', name: 'Ollama' },
-        ];
-        if (!mounted) return;
-        setProviders(
-          KNOWN_PROVIDERS.map((p) => ({
-            ...p,
-            status: configured.includes(p.id) ? 'online' : 'unconfigured',
-          }))
-        );
-      } catch {
-        if (mounted) {
-          setProviders([
-            { id: 'openai', name: 'OpenAI', status: 'unconfigured' },
-            { id: 'anthropic', name: 'Anthropic', status: 'unconfigured' },
-            { id: 'google', name: 'Google', status: 'unconfigured' },
-            { id: 'openrouter', name: 'OpenRouter', status: 'unconfigured' },
-            { id: 'ollama', name: 'Ollama', status: 'unconfigured' },
-          ]);
-        }
-      } finally {
-        if (mounted) setProvidersLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const providers = useMemo<ProviderStatus[]>(() => {
+    const configured = runtimeStatus?.runtime.providers?.configured ?? [];
+    const defaultProvider = runtimeStatus?.runtime.providers?.defaultProvider ?? null;
+    return KNOWN_PROVIDERS.map((provider) => ({
+      ...provider,
+      name: provider.id === defaultProvider ? `${provider.name} (default)` : provider.name,
+      status: configured.includes(provider.id) ? 'online' : 'unconfigured',
+    }));
+  }, [runtimeStatus]);
 
   const STATUS_DOT: Record<ProviderStatus['status'], string> = {
     online: 'bg-emerald-400',
@@ -369,9 +433,9 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
     { key: 'agency', label: 'New Agency', icon: <Plus className="h-4 w-4" /> },
     { key: 'graph-builder', label: 'New Workflow', icon: <Network className="h-4 w-4" /> },
     { key: 'playground', label: 'Test Agent', icon: <Bot className="h-4 w-4" /> },
-    { key: 'capabilities', label: 'Browse Extensions', icon: <Package className="h-4 w-4" /> },
-    { key: 'tool-forge', label: 'Forge a Tool', icon: <Hammer className="h-4 w-4" /> },
-    { key: 'rag-docs', label: 'Upload Documents', icon: <FileUp className="h-4 w-4" /> },
+    { key: 'marketplace', label: 'Browse Marketplace', icon: <Store className="h-4 w-4" /> },
+    { key: 'capabilities', label: 'Capability Browser', icon: <Package className="h-4 w-4" /> },
+    { key: 'rag', label: 'RAG Workspace', icon: <FileUp className="h-4 w-4" /> },
   ];
 
   return (
@@ -402,7 +466,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
           <KpiCard
             icon={<Phone className="h-4 w-4" />}
             label="Active Calls"
-            value={activeCalls.length}
+            value={activeCallCount}
             onClick={() => onNavigate('call-monitor')}
           />
         </div>
@@ -411,7 +475,10 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
       {/* Middle row: activity + quick actions */}
       <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
         {/* Recent Activity */}
-        <section className="card-panel--strong flex flex-col gap-0 overflow-hidden" aria-label="Recent activity">
+        <section
+          className="card-panel--strong flex flex-col gap-0 overflow-hidden"
+          aria-label="Recent activity"
+        >
           <header className="flex items-center gap-2 border-b theme-border px-3 py-2">
             <Activity className="h-3.5 w-3.5 theme-text-muted" />
             <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] theme-text-muted">
@@ -444,7 +511,14 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
                 >
                   <Icon className={`mt-0.5 h-3.5 w-3.5 flex-none ${color}`} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs theme-text-primary">{item.label}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-xs theme-text-primary">{item.label}</p>
+                      <DataSourceBadge
+                        tone={item.sourceMode}
+                        label={activitySourceLabel(item.sourceMode)}
+                        className="shrink-0"
+                      />
+                    </div>
                     {item.detail && (
                       <p className="truncate text-[10px] theme-text-muted">{item.detail}</p>
                     )}
@@ -489,10 +563,42 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
           <header className="mb-2 flex items-center gap-2">
             <CheckCircle2 className="h-3.5 w-3.5 theme-text-muted" />
             <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] theme-text-muted">
-              Provider Health
+              Runtime &amp; Providers
             </h2>
+            <button
+              type="button"
+              onClick={onManageSampleWorkspace}
+              className="ml-auto rounded-full border theme-border px-2 py-1 text-[10px] theme-text-secondary transition hover:opacity-90"
+            >
+              Sample Data
+            </button>
           </header>
-          {providersLoading ? (
+          <div className="mb-3 flex flex-wrap gap-2">
+            <DataSourceBadge
+              tone={workspaceStatus.tone}
+              label={`Workspace ${workspaceStatus.label}`}
+            />
+            <DataSourceBadge
+              tone={
+                sampleWorkspaceMode === 'sample'
+                  ? 'demo'
+                  : sampleWorkspaceMode === 'clean'
+                    ? 'local'
+                    : 'neutral'
+              }
+              label={
+                sampleWorkspaceMode === 'sample'
+                  ? 'Sample workspace on'
+                  : sampleWorkspaceMode === 'clean'
+                    ? 'Clean workspace'
+                    : 'Sample choice pending'
+              }
+            />
+          </div>
+          <p className="mb-3 text-[11px] leading-relaxed theme-text-secondary">
+            {workspaceStatus.detail}
+          </p>
+          {runtimeStatusLoading ? (
             <LoadingSkeleton lines={3} />
           ) : (
             <div className="flex flex-wrap gap-3">

@@ -14,6 +14,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Trash2, Users, Hash, Sparkles, Code } from 'lucide-react';
 import { useSessionStore } from '@/state/sessionStore';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 /** Single agent role configuration for the agency */
 interface AgentRoleConfig {
@@ -151,13 +152,24 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
       <header className="mb-4 flex items-center justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-[0.4em] text-slate-500">Agency Composer</p>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Multi-GMI Coordination</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Multi-GMI Coordination</h3>
+            <HelpTooltip label="Explain agency composer" side="bottom">
+              Build a multi-seat agency request. Structured mode gives each seat an explicit role, persona, and task.
+              Markdown mode is faster when you want one line per seat using <code>[Role] task</code>.
+            </HelpTooltip>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setMode(mode === 'structured' ? 'markdown' : 'structured')}
             disabled={formDisabled}
+            title={
+              mode === 'structured'
+                ? 'Switch to markdown delegation syntax with one [Role] task per line.'
+                : 'Switch to explicit role, persona, and instruction controls.'
+            }
             className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 disabled:opacity-50"
           >
             {mode === 'structured' ? <Code className="h-3 w-3" /> : <Hash className="h-3 w-3" />}
@@ -190,6 +202,7 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
                 type="button"
                 onClick={rotateExample}
                 disabled={formDisabled}
+                title="Cycle through example multi-agent prompts you can adapt."
                 className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
               >
                 <Sparkles className="h-3 w-3" />
@@ -219,6 +232,7 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
                 type="button"
                 onClick={addRole}
                 disabled={formDisabled}
+                title="Add another seat to the agency with its own persona and instruction."
                 className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/20 dark:text-slate-300"
               >
                 <Plus className="h-3 w-3" />
@@ -246,7 +260,7 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
                         onClick={() => removeRole(role.id)}
                         disabled={formDisabled}
                         aria-label={`Remove agent role ${index + 1}`}
-                        title="Remove role"
+                        title="Remove this seat from the agency request."
                         className="rounded-full border border-slate-200 p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -312,6 +326,11 @@ export function AgencyComposer({ onSubmit, disabled = false, isSubmitting = fals
         <button
           type="submit"
           disabled={formDisabled || (mode === 'markdown' ? !markdownInput.trim() : roles.length === 0)}
+          title={
+            mode === 'markdown'
+              ? 'Parse the markdown delegation block into seats and launch the agency workflow.'
+              : 'Launch the agency workflow using the configured seats.'
+          }
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Users className="h-4 w-4" />

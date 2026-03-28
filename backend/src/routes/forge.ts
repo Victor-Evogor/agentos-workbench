@@ -26,7 +26,7 @@
  *   - Approval threshold: correctness >= 60 AND safety >= 80.
  */
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply } from 'fastify';
 
 // ---------------------------------------------------------------------------
 // In-memory tool registry (persists across requests within a server process)
@@ -57,6 +57,14 @@ interface JudgeVerdict {
   };
   reasoning: string;
   verdictAt: number;
+}
+
+type ForgeWorkbenchMode = 'demo';
+
+export const WORKBENCH_FORGE_MODE_HEADER = 'X-AgentOS-Workbench-Mode';
+
+function markForgeReply(reply: FastifyReply, mode: ForgeWorkbenchMode = 'demo'): void {
+  reply.header(WORKBENCH_FORGE_MODE_HEADER, mode);
 }
 
 const toolRegistry: ForgedTool[] = [];
@@ -104,7 +112,7 @@ function judgeImplementation(description: string): JudgeVerdict & { toolId: stri
   const approved = correctness >= 60 && safety >= 80;
 
   return {
-    requestId: '',           // filled by caller
+    requestId: '', // filled by caller
     toolId,
     toolName: description.slice(0, 40).trim(),
     status: approved ? 'approved' : 'rejected',
@@ -124,125 +132,191 @@ export default async function forgeRoutes(fastify: FastifyInstance): Promise<voi
   /** Submit a forge request and receive a verdict + forged tool. */
   fastify.post<{
     Body: { description: string; parametersSchema?: string };
-  }>('/forge', {
-    schema: {
-      description: 'Submit a tool forge request',
-      tags: ['Forge'],
-      body: {
-        type: 'object',
-        required: ['description'],
-        properties: {
-          description: { type: 'string' },
-          parametersSchema: { type: 'string' },
-        },
-      },
-      response: {
-        200: {
+  }>(
+    '/forge',
+    {
+      schema: {
+        description: 'Submit a tool forge request',
+        tags: ['Forge'],
+        body: {
           type: 'object',
-          additionalProperties: true,
-        },
-      },
-    },
-  }, async (req, reply) => {
-    const { description, parametersSchema = '' } = req.body;
-    const requestId = generateId();
-
-    const judgeResult = judgeImplementation(description);
-    judgeResult.requestId = requestId;
-
-    if (judgeResult.status === 'rejected') {
-      return reply.code(200).send({
-        requestId,
-        status: 'rejected',
-        verdict: judgeResult,
-        tool: null,
-      });
-    }
-
-    const impl = generateImplementation(description, parametersSchema);
-    const tool: ForgedTool = {
-      id: judgeResult.toolId,
-      name: judgeResult.toolName,
-      description,
-      implementation: impl,
-      tier: 'session',
-      callCount: 0,
-      successCount: 0,
-      totalLatencyMs: 0,
-      createdAt: Date.now(),
-    };
-    toolRegistry.push(tool);
-
-    return reply.code(200).send({
-      requestId,
-      status: 'approved',
-      verdict: judgeResult,
-      tool: serializeTool(tool),
-    });
-  });
-
-  /** List all forged tools. */
-  fastify.get('/forged-tools', {
-    schema: {
-      description: 'List all forged tools',
-      tags: ['Forge'],
-      response: {
-        200: {
-          type: 'object',
+          required: ['description'],
           properties: {
-            tools: {
-              type: 'array',
-              items: { type: 'object', additionalProperties: true },
+            description: { type: 'string' },
+            parametersSchema: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              requestId: { type: 'string' },
+              status: { type: 'string' },
+              verdict: { type: 'object', additionalProperties: true },
+              tool: {
+                anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+              },
             },
+            required: ['mode', 'requestId', 'status', 'verdict', 'tool'],
           },
         },
       },
     },
-  }, async () => ({
-    tools: toolRegistry.map(serializeTool),
-  }));
+    async (req, reply) => {
+      const { description, parametersSchema = '' } = req.body;
+      const requestId = generateId();
+
+      const judgeResult = judgeImplementation(description);
+      judgeResult.requestId = requestId;
+
+      if (judgeResult.status === 'rejected') {
+        markForgeReply(reply);
+        return reply.code(200).send({
+          mode: 'demo',
+          requestId,
+          status: 'rejected',
+          verdict: judgeResult,
+          tool: null,
+        });
+      }
+
+      const impl = generateImplementation(description, parametersSchema);
+      const tool: ForgedTool = {
+        id: judgeResult.toolId,
+        name: judgeResult.toolName,
+        description,
+        implementation: impl,
+        tier: 'session',
+        callCount: 0,
+        successCount: 0,
+        totalLatencyMs: 0,
+        createdAt: Date.now(),
+      };
+      toolRegistry.push(tool);
+
+      markForgeReply(reply);
+      return reply.code(200).send({
+        mode: 'demo',
+        requestId,
+        status: 'approved',
+        verdict: judgeResult,
+        tool: serializeTool(tool),
+      });
+    }
+  );
+
+  /** List all forged tools. */
+  fastify.get(
+    '/forged-tools',
+    {
+      schema: {
+        description: 'List all forged tools',
+        tags: ['Forge'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              tools: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+            required: ['mode', 'tools'],
+          },
+        },
+      },
+    },
+    async (_req, reply) => {
+      markForgeReply(reply);
+      return {
+        mode: 'demo' as const,
+        tools: toolRegistry.map(serializeTool),
+      };
+    }
+  );
 
   /** Run a forged tool with arbitrary JSON input. */
   fastify.post<{
     Params: { id: string };
     Body: Record<string, unknown>;
-  }>('/forged-tools/:id/run', {
-    schema: {
-      description: 'Run a forged tool with test input',
-      tags: ['Forge'],
-      params: {
-        type: 'object',
-        required: ['id'],
-        properties: { id: { type: 'string' } },
+  }>(
+    '/forged-tools/:id/run',
+    {
+      schema: {
+        description: 'Run a forged tool with test input',
+        tags: ['Forge'],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        body: { type: 'object', additionalProperties: true },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              ok: { type: 'boolean' },
+              result: {},
+            },
+            required: ['mode', 'ok', 'result'],
+          },
+          404: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              error: { type: 'string' },
+            },
+            required: ['mode', 'error'],
+          },
+          500: {
+            type: 'object',
+            properties: {
+              mode: { type: 'string' },
+              error: { type: 'string' },
+            },
+            required: ['mode', 'error'],
+          },
+        },
       },
-      body: { type: 'object', additionalProperties: true },
     },
-  }, async (req, reply) => {
-    const tool = toolRegistry.find((t) => t.id === req.params.id);
-    if (!tool) {
-      return reply.code(404).send({ error: 'Tool not found' });
-    }
+    async (req, reply) => {
+      const tool = toolRegistry.find((t) => t.id === req.params.id);
+      if (!tool) {
+        markForgeReply(reply);
+        return reply.code(404).send({ mode: 'demo', error: 'Tool not found' });
+      }
 
-    const startMs = Date.now();
-    tool.callCount += 1;
+      const startMs = Date.now();
+      tool.callCount += 1;
 
-    // Evaluate the stub implementation safely
-    let result: unknown;
-    try {
-      // eslint-disable-next-line no-new-func
-      const fn = new Function('params', `${tool.implementation}\nreturn run(params);`);
-      result = await Promise.resolve(fn(req.body));
-      tool.successCount += 1;
-    } catch (err) {
+      // Evaluate the stub implementation safely
+      let result: unknown;
+      try {
+        // eslint-disable-next-line no-new-func
+        const fn = new Function('params', `${tool.implementation}\nreturn run(params);`);
+        result = await Promise.resolve(fn(req.body));
+        tool.successCount += 1;
+      } catch (err) {
+        tool.totalLatencyMs += Date.now() - startMs;
+        markForgeReply(reply);
+        return reply.code(500).send({
+          mode: 'demo',
+          error: err instanceof Error ? err.message : 'Tool execution failed',
+        });
+      }
+
       tool.totalLatencyMs += Date.now() - startMs;
-      return reply.code(500).send({
-        error: err instanceof Error ? err.message : 'Tool execution failed',
+      markForgeReply(reply);
+      return reply.code(200).send({
+        mode: 'demo',
+        ok: true,
+        result,
       });
     }
-
-    tool.totalLatencyMs += Date.now() - startMs;
-    return reply.code(200).send(result);
-  });
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -254,8 +328,7 @@ export default async function forgeRoutes(fastify: FastifyInstance): Promise<voi
  * fields (avgLatencyMs, successRate) from raw counters.
  */
 function serializeTool(tool: ForgedTool) {
-  const avgLatencyMs =
-    tool.callCount > 0 ? Math.round(tool.totalLatencyMs / tool.callCount) : 0;
+  const avgLatencyMs = tool.callCount > 0 ? Math.round(tool.totalLatencyMs / tool.callCount) : 0;
   const successRate =
     tool.callCount > 0 ? Math.round((tool.successCount / tool.callCount) * 100) : 100;
   return {

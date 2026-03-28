@@ -28,6 +28,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Input } from './ui/Input';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 // Types matching AgentOS HITL module
 interface PendingApproval {
@@ -215,6 +216,7 @@ function ApprovalCard({
 
           <button
             onClick={() => setExpanded(!expanded)}
+            title={expanded ? 'Hide the approval context payload.' : 'Show the context payload behind this approval request.'}
             className="text-sm text-blue-500 hover:underline flex items-center gap-1"
           >
             {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -233,12 +235,13 @@ function ApprovalCard({
                 placeholder="Reason for rejection..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
+                title="Explain why this approval should be rejected."
               />
               <div className="flex gap-2">
-                <Button size="sm" variant="destructive" onClick={() => onReject(approval.actionId, rejectReason)}>
+                <Button size="sm" variant="destructive" title="Reject this approval request using the reason above." onClick={() => onReject(approval.actionId, rejectReason)}>
                   Confirm Reject
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setShowRejectForm(false)}>
+                <Button size="sm" variant="outline" title="Close the rejection form without rejecting this approval." onClick={() => setShowRejectForm(false)}>
                   Cancel
                 </Button>
               </div>
@@ -248,6 +251,7 @@ function ApprovalCard({
         <div className="flex gap-2">
           <Button
             size="sm"
+            title="Approve this agent-requested action."
             variant="outline"
             className="text-green-600 border-green-600 hover:bg-green-50"
             onClick={() => onApprove(approval.actionId)}
@@ -256,6 +260,7 @@ function ApprovalCard({
           </Button>
           <Button
             size="sm"
+            title="Reject this action request and optionally provide a reason."
             variant="outline"
             className="text-red-600 border-red-600 hover:bg-red-50"
             onClick={() => setShowRejectForm(true)}
@@ -310,6 +315,7 @@ function ClarificationCard({
                     name={`clarify-${clarification.requestId}`}
                     checked={selectedOption === opt.optionId}
                     onChange={() => setSelectedOption(opt.optionId)}
+                    title={`Choose ${opt.label} as the clarification response.`}
                     className="accent-blue-500"
                   />
                   <div>
@@ -328,12 +334,14 @@ function ClarificationCard({
               placeholder="Or type your own response..."
               value={freeformResponse}
               onChange={(e) => setFreeformResponse(e.target.value)}
+              title="Provide a freeform clarification response instead of choosing a preset option."
               className="mb-3"
             />
           )}
 
           <Button
             size="sm"
+            title="Send the selected clarification response back to the agent."
             onClick={() =>
               onSubmit(clarification.requestId, {
                 optionId: selectedOption || undefined,
@@ -392,16 +400,17 @@ function EscalationCard({
           )}
 
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => onResolve(escalation.escalationId, 'human_takeover')}>
+            <Button size="sm" title="Take over this escalated task manually." onClick={() => onResolve(escalation.escalationId, 'human_takeover')}>
               <User className="w-4 h-4 mr-1" /> Take Over
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onResolve(escalation.escalationId, 'agent_continue')}>
+            <Button size="sm" variant="outline" title="Allow the agent to continue after acknowledging the escalation." onClick={() => onResolve(escalation.escalationId, 'agent_continue')}>
               Let Agent Continue
             </Button>
             <Button
               size="sm"
               variant="outline"
               className="text-red-600"
+              title="Abort the escalated task entirely."
               onClick={() => onResolve(escalation.escalationId, 'abort')}
             >
               Abort Task
@@ -488,11 +497,17 @@ export function HumanInteractionDashboard() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Human-in-the-Loop</h1>
-          <p className="text-[var(--color-text-muted)]">
-            Review agent requests and provide guidance
-          </p>
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-2xl font-bold">Human-in-the-Loop</h1>
+            <p className="text-[var(--color-text-muted)]">
+              Review agent requests and provide guidance
+            </p>
+          </div>
+          <HelpTooltip label="Explain human-in-the-loop dashboard" side="bottom">
+            Triage approvals, clarifications, escalations, and human feedback so autonomous agents can safely ask for
+            decisions instead of guessing.
+          </HelpTooltip>
         </div>
         {pendingCount > 0 && (
           <Badge variant="destructive" className="text-lg px-3 py-1">
@@ -505,6 +520,7 @@ export function HumanInteractionDashboard() {
       <div className="flex gap-2 border-b border-[var(--color-border)]">
         <button
           onClick={() => setActiveTab('pending')}
+          title="Review current approvals, clarifications, and escalations that need human input."
           className={`px-4 py-2 font-medium transition-colors ${
             activeTab === 'pending'
               ? 'text-blue-500 border-b-2 border-blue-500'
@@ -521,6 +537,7 @@ export function HumanInteractionDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('feedback')}
+          title="Browse previously submitted feedback given to agents."
           className={`px-4 py-2 font-medium transition-colors ${
             activeTab === 'feedback'
               ? 'text-blue-500 border-b-2 border-blue-500'
@@ -617,6 +634,5 @@ export function HumanInteractionDashboard() {
     </div>
   );
 }
-
 
 

@@ -61,6 +61,7 @@ export function SkillDetail({ skill, onClose, onToggle }: SkillDetailProps) {
       <button
         type="button"
         onClick={onClose}
+        title="Return to the full skill catalog."
         className="flex items-center gap-1.5 text-xs theme-text-muted hover:theme-text-primary transition-colors w-fit"
       >
         <span aria-hidden="true">←</span>
@@ -111,6 +112,7 @@ export function SkillDetail({ skill, onClose, onToggle }: SkillDetailProps) {
       <button
         type="button"
         onClick={() => onToggle(skill.name, !skill.enabled)}
+        title={`${skill.enabled ? 'Disable' : 'Enable'} this skill for the current workbench environment.`}
         className={[
           'self-start rounded-full px-4 py-1.5 text-xs font-semibold transition-colors',
           skill.enabled

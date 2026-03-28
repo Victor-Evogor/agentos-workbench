@@ -95,7 +95,7 @@
     },
     "footer": {
       "localNotice": "Conexión al backend requerida",
-      "localNoticeDetails": "Este banco de trabajo envía solicitudes a tu API backend en /api/agentos/stream. Asegúrate de que tu backend esté ejecutándose con AGENTOS_ENABLED=true. El estado de la UI (sesiones, personas) se almacena localmente en tu navegador (IndexedDB) para acceso rápido."
+      "localNoticeDetails": "Este banco de trabajo envía solicitudes a tu API backend en /api/agentos/stream. Asegúrate de que el backend esté en ejecución y sea accesible.\n\n⚠️ MODO AGENCY: El workbench todavía usa endpoints heredados de agency/workflow. Las demos multi-seat pasan por /api/agentos/agency/workflow/start y rutas relacionadas, no por el nuevo graph runtime unificado todavía.\n\nEl estado de la UI (sesiones, personas y agencias) se almacena localmente en tu navegador (IndexedDB) para acceso rápido."
     }
   },
   "artifactViewer": {

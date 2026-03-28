@@ -28,6 +28,7 @@
  */
 
 import { create } from 'zustand';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,20 +89,104 @@ export interface PlatformMeta {
 }
 
 export const PLATFORM_META: PlatformMeta[] = [
-  { id: 'twitter',   label: 'Twitter / X',  charLimit: 280,   hashtagStyle: 'inline',  supportedMediaTypes: ['image', 'video'] },
-  { id: 'linkedin',  label: 'LinkedIn',      charLimit: 3000,  hashtagStyle: 'grouped', supportedMediaTypes: ['image', 'video'] },
-  { id: 'facebook',  label: 'Facebook',      charLimit: 63206, hashtagStyle: 'inline',  supportedMediaTypes: ['image', 'video'] },
-  { id: 'threads',   label: 'Threads',       charLimit: 500,   hashtagStyle: 'inline',  supportedMediaTypes: ['image', 'video'] },
-  { id: 'bluesky',   label: 'Bluesky',       charLimit: 300,   hashtagStyle: 'inline',  supportedMediaTypes: ['image'] },
-  { id: 'mastodon',  label: 'Mastodon',      charLimit: 500,   hashtagStyle: 'inline',  supportedMediaTypes: ['image', 'video'] },
-  { id: 'instagram', label: 'Instagram',     charLimit: 2200,  hashtagStyle: 'grouped', supportedMediaTypes: ['image', 'video'] },
-  { id: 'youtube',   label: 'YouTube',       charLimit: 5000,  hashtagStyle: 'grouped', supportedMediaTypes: ['video'] },
-  { id: 'tiktok',    label: 'TikTok',        charLimit: 2200,  hashtagStyle: 'inline',  supportedMediaTypes: ['video'] },
-  { id: 'pinterest', label: 'Pinterest',     charLimit: 500,   hashtagStyle: 'grouped', supportedMediaTypes: ['image'] },
-  { id: 'reddit',    label: 'Reddit',        charLimit: 40000, hashtagStyle: 'none',    supportedMediaTypes: ['image', 'video'] },
-  { id: 'devto',     label: 'Dev.to',        charLimit: 100000,hashtagStyle: 'grouped', supportedMediaTypes: ['image'] },
-  { id: 'medium',    label: 'Medium',        charLimit: 100000,hashtagStyle: 'grouped', supportedMediaTypes: ['image'] },
-  { id: 'hashnode',  label: 'Hashnode',      charLimit: 100000,hashtagStyle: 'grouped', supportedMediaTypes: ['image'] },
+  {
+    id: 'twitter',
+    label: 'Twitter / X',
+    charLimit: 280,
+    hashtagStyle: 'inline',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'linkedin',
+    label: 'LinkedIn',
+    charLimit: 3000,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    charLimit: 63206,
+    hashtagStyle: 'inline',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'threads',
+    label: 'Threads',
+    charLimit: 500,
+    hashtagStyle: 'inline',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'bluesky',
+    label: 'Bluesky',
+    charLimit: 300,
+    hashtagStyle: 'inline',
+    supportedMediaTypes: ['image'],
+  },
+  {
+    id: 'mastodon',
+    label: 'Mastodon',
+    charLimit: 500,
+    hashtagStyle: 'inline',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram',
+    charLimit: 2200,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    charLimit: 5000,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['video'],
+  },
+  {
+    id: 'tiktok',
+    label: 'TikTok',
+    charLimit: 2200,
+    hashtagStyle: 'inline',
+    supportedMediaTypes: ['video'],
+  },
+  {
+    id: 'pinterest',
+    label: 'Pinterest',
+    charLimit: 500,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['image'],
+  },
+  {
+    id: 'reddit',
+    label: 'Reddit',
+    charLimit: 40000,
+    hashtagStyle: 'none',
+    supportedMediaTypes: ['image', 'video'],
+  },
+  {
+    id: 'devto',
+    label: 'Dev.to',
+    charLimit: 100000,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['image'],
+  },
+  {
+    id: 'medium',
+    label: 'Medium',
+    charLimit: 100000,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['image'],
+  },
+  {
+    id: 'hashnode',
+    label: 'Hashnode',
+    charLimit: 100000,
+    hashtagStyle: 'grouped',
+    supportedMediaTypes: ['image'],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -129,7 +214,10 @@ export function adaptForPlatform(text: string, meta: PlatformMeta): string {
   // Extract hashtags
   const hashtagRegex = /#[\w\u00C0-\u017F]+/g;
   const hashtags = (text.match(hashtagRegex) ?? []).join(' ');
-  const withoutHashtags = text.replace(hashtagRegex, '').replace(/\s{2,}/g, ' ').trim();
+  const withoutHashtags = text
+    .replace(hashtagRegex, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 
   if (meta.hashtagStyle === 'grouped') {
     adapted = hashtags ? `${withoutHashtags}\n\n${hashtags}` : withoutHashtags;
@@ -163,6 +251,8 @@ interface SocialState {
   scheduledAt: number | null;
   /** True while post history is being fetched from backend. */
   loading: boolean;
+  /** Source mode for the currently displayed social data. */
+  dataMode: WorkbenchDataMode;
   /** Last error message, or null. */
   error: string | null;
 
@@ -186,6 +276,8 @@ interface SocialState {
   setScheduledAt: (at: number | null) => void;
   /** Set the loading flag. */
   setLoading: (loading: boolean) => void;
+  /** Set the current social data mode. */
+  setDataMode: (mode: WorkbenchDataMode) => void;
   /** Set or clear the error message. */
   setError: (error: string | null) => void;
 }
@@ -197,6 +289,7 @@ export const useSocialStore = create<SocialState>((set) => ({
   posts: [],
   scheduledAt: null,
   loading: false,
+  dataMode: 'demo',
   error: null,
 
   setDraftText: (text) => set({ draftText: text }),
@@ -204,21 +297,18 @@ export const useSocialStore = create<SocialState>((set) => ({
   togglePlatform: (platform) =>
     set((s) => {
       const next = new Set(s.selectedPlatforms);
-      if (next.has(platform)) next.delete(platform); else next.add(platform);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
       return { selectedPlatforms: next };
     }),
 
-  setSelectedPlatforms: (platforms) =>
-    set({ selectedPlatforms: new Set(platforms) }),
+  setSelectedPlatforms: (platforms) => set({ selectedPlatforms: new Set(platforms) }),
 
-  addMedia: (item) =>
-    set((s) => ({ mediaItems: [...s.mediaItems, item] })),
+  addMedia: (item) => set((s) => ({ mediaItems: [...s.mediaItems, item] })),
 
-  removeMedia: (id) =>
-    set((s) => ({ mediaItems: s.mediaItems.filter((m) => m.id !== id) })),
+  removeMedia: (id) => set((s) => ({ mediaItems: s.mediaItems.filter((m) => m.id !== id) })),
 
-  addPost: (post) =>
-    set((s) => ({ posts: [post, ...s.posts] })),
+  addPost: (post) => set((s) => ({ posts: [post, ...s.posts] })),
 
   updatePost: (id, patch) =>
     set((s) => ({ posts: s.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
@@ -226,5 +316,6 @@ export const useSocialStore = create<SocialState>((set) => ({
   setPosts: (posts) => set({ posts }),
   setScheduledAt: (at) => set({ scheduledAt: at }),
   setLoading: (loading) => set({ loading }),
+  setDataMode: (dataMode) => set({ dataMode }),
   setError: (error) => set({ error }),
 }));

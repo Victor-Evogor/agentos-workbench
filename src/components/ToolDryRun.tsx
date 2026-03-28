@@ -14,6 +14,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { agentosClient } from '@/lib/agentosClient';
+import { unwrapToolExecutionResult } from '@/lib/toolExecutionResult';
 import { AlertCircle, CheckCircle, Play, X } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -174,20 +175,24 @@ export const ToolDryRun: React.FC<ToolDryRunProps> = ({
   const renderOutput = () => {
     if (!output) return null;
 
-    const outputObj = output as Record<string, unknown>;
+    const effectiveOutput = unwrapToolExecutionResult(output);
+    const outputObj =
+      effectiveOutput && typeof effectiveOutput === 'object'
+        ? (effectiveOutput as Record<string, unknown>)
+        : null;
 
     // Widget output: render embedded HTML preview
-    if (toolName === 'generate_widget' && outputObj.html) {
+    if (toolName === 'generate_widget' && outputObj?.html) {
       return <WidgetEmbedFallback html={outputObj.html as string} />;
     }
 
     // Document output: render document card
-    if (toolName === 'document_export' && outputObj.format) {
+    if (toolName === 'document_export' && outputObj?.format) {
       return (
         <DocumentCardFallback
           format={outputObj.format as string}
-          content={(outputObj.content as string) ?? ''}
-          title={outputObj.title as string | undefined}
+          content={JSON.stringify(outputObj, null, 2)}
+          title={outputObj.filename as string | undefined}
         />
       );
     }

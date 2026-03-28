@@ -1,6 +1,14 @@
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { pathToFileURL } from 'node:url';
+import { createWorkbenchCognitiveMemoryFactory } from './workbenchCognitiveMemory';
+import {
+  WORKBENCH_RUNTIME_RAG_CHUNK_OVERLAP,
+  WORKBENCH_RUNTIME_RAG_CHUNK_SIZE,
+  WORKBENCH_RUNTIME_RAG_DATA_SOURCE_ID,
+  WORKBENCH_RUNTIME_RAG_VECTOR_PERSIST_PATH,
+  WORKBENCH_RUNTIME_RAG_PROVIDER_ID,
+} from './workbenchRuntimeRag';
 
 dotenv.config();
 
@@ -9,6 +17,32 @@ type AgentOSInstance = {
   processRequest: (input: unknown) => AsyncGenerator<any>;
   listAvailablePersonas: (userId?: string) => Promise<unknown[]>;
   listWorkflowDefinitions: () => unknown[];
+  getConversationHistory?: (conversationId: string, userId: string) => Promise<unknown>;
+  getRuntimeSnapshot?: () => Promise<unknown>;
+  getConversationManager?: () => unknown;
+  getGMIManager?: () => unknown;
+  getExtensionManager?: () => unknown;
+  getToolOrchestrator?: () => unknown;
+  getModelProviderManager?: () => unknown;
+  shutdown?: () => Promise<void>;
+};
+
+type WorkbenchRetrievalAugmentor = {
+  checkHealth?: () => Promise<unknown>;
+  retrieveContext?: (queryText: string, options?: unknown) => Promise<unknown>;
+  ingestDocuments?: (documents: unknown, options?: unknown) => Promise<unknown>;
+  deleteDocuments?: (documentIds: string[], dataSourceId?: string, options?: unknown) => Promise<unknown>;
+};
+
+type WorkbenchVectorStoreManager = {
+  listDataSourceIds?: () => string[];
+  checkHealth?: (providerId?: string) => Promise<unknown>;
+  getProvider?: (providerId: string) => unknown;
+};
+
+type WorkbenchModelProviderManager = {
+  getDefaultProvider?: () => unknown;
+  getProvider?: (providerId: string) => unknown;
 };
 
 // Mock Services
@@ -43,14 +77,91 @@ const runtimeImport = new Function('specifier', 'return import(specifier)') as (
   specifier: string
 ) => Promise<{ AgentOS: new () => AgentOSInstance }>;
 
+function shouldEnableWorkbenchRuntimeRag(): boolean {
+  const runtimeToggle = (process.env.AGENTOS_WORKBENCH_ENABLE_RUNTIME_RAG ?? 'true').trim().toLowerCase();
+  if (runtimeToggle === 'false' || runtimeToggle === '0' || runtimeToggle === 'off') {
+    return false;
+  }
+
+  const openAiKey = process.env.OPENAI_API_KEY?.trim();
+  return Boolean(openAiKey && openAiKey !== 'dummy-key');
+}
+
+function buildWorkbenchRagConfig() {
+  if (!shouldEnableWorkbenchRuntimeRag()) {
+    return undefined;
+  }
+
+  return {
+    enabled: true,
+    embeddingManagerConfig: {
+      embeddingModels: [
+        {
+          modelId: 'text-embedding-3-small',
+          providerId: 'openai',
+          dimension: 1536,
+          isDefault: true,
+        },
+      ],
+    },
+    vectorStoreManagerConfig: {
+      managerId: 'agentos-workbench-rag-vsm',
+      providers: [
+        {
+          id: WORKBENCH_RUNTIME_RAG_PROVIDER_ID,
+          type: 'in_memory',
+          persistPath: WORKBENCH_RUNTIME_RAG_VECTOR_PERSIST_PATH,
+          defaultEmbeddingDimension: 1536,
+          similarityMetric: 'cosine',
+        },
+      ],
+      defaultProviderId: WORKBENCH_RUNTIME_RAG_PROVIDER_ID,
+      defaultEmbeddingDimension: 1536,
+    },
+    dataSourceConfigs: [
+      {
+        dataSourceId: WORKBENCH_RUNTIME_RAG_DATA_SOURCE_ID,
+        displayName: 'Workbench Runtime RAG',
+        description: 'Runtime-backed retrieval snippets ingested from the AgentOS Workbench.',
+        vectorStoreProviderId: WORKBENCH_RUNTIME_RAG_PROVIDER_ID,
+        actualNameInProvider: WORKBENCH_RUNTIME_RAG_DATA_SOURCE_ID,
+        embeddingDimension: 1536,
+        isDefaultIngestionSource: true,
+        isDefaultQuerySource: true,
+      },
+    ],
+    retrievalAugmentorConfig: {
+      defaultDataSourceId: WORKBENCH_RUNTIME_RAG_DATA_SOURCE_ID,
+      defaultEmbeddingModelId: 'text-embedding-3-small',
+      defaultQueryEmbeddingModelId: 'text-embedding-3-small',
+      defaultChunkingStrategy: {
+        type: 'fixed_size',
+        chunkSize: WORKBENCH_RUNTIME_RAG_CHUNK_SIZE,
+        chunkOverlap: WORKBENCH_RUNTIME_RAG_CHUNK_OVERLAP,
+      },
+      globalDefaultRetrievalOptions: {
+        topK: 5,
+        strategy: 'similarity',
+      },
+      categoryBehaviors: [],
+    },
+  };
+}
+
 async function createAgentOS(): Promise<AgentOSInstance> {
+  const sourceEntry = path.resolve(__dirname, '../../../../../packages/agentos/src/index.ts');
   try {
-    const module = await runtimeImport('@framers/agentos');
+    const module = await runtimeImport(pathToFileURL(sourceEntry).href);
     return new module.AgentOS() as AgentOSInstance;
   } catch {
-    const fallbackEntry = path.resolve(__dirname, '../../../../../packages/agentos/dist/index.js');
-    const module = await runtimeImport(pathToFileURL(fallbackEntry).href);
-    return new module.AgentOS() as AgentOSInstance;
+    try {
+      const module = await runtimeImport('@framers/agentos');
+      return new module.AgentOS() as AgentOSInstance;
+    } catch {
+      const fallbackEntry = path.resolve(__dirname, '../../../../../packages/agentos/dist/index.js');
+      const module = await runtimeImport(pathToFileURL(fallbackEntry).href);
+      return new module.AgentOS() as AgentOSInstance;
+    }
   }
 }
 
@@ -76,6 +187,12 @@ export async function initializeAgentOS() {
     console.log(`Loading personas from: ${personasPath}`);
 
     const agentos = await getAgentOS();
+    const ragConfig = buildWorkbenchRagConfig();
+    if (ragConfig) {
+      console.log('AgentOS Workbench: runtime RAG bootstrap enabled.');
+    } else {
+      console.log('AgentOS Workbench: runtime RAG bootstrap disabled (missing key or env toggle).');
+    }
 
     await agentos.initialize({
       authService: mockAuthService as any,
@@ -92,6 +209,7 @@ export async function initializeAgentOS() {
           defaultLlmProviderId: 'openai',
           defaultLlmModelId: 'gpt-4o',
         },
+        cognitiveMemoryFactory: createWorkbenchCognitiveMemoryFactory(),
       },
       orchestratorConfig: {} as any,
       promptEngineConfig: {
@@ -140,6 +258,7 @@ export async function initializeAgentOS() {
       toolPermissionManagerConfig: {} as any,
       conversationManagerConfig: {} as any,
       streamingManagerConfig: {} as any,
+      ragConfig,
       defaultPersonaId: 'default',
       modelProviderManagerConfig: {
         providers: [
@@ -159,4 +278,47 @@ export async function initializeAgentOS() {
   })();
 
   await initializationPromise;
+}
+
+export async function getAgentOSRagRuntime(): Promise<{
+  agentos: AgentOSInstance;
+  retrievalAugmentor: WorkbenchRetrievalAugmentor | null;
+  vectorStoreManager: WorkbenchVectorStoreManager | null;
+  modelProviderManager: WorkbenchModelProviderManager | null;
+}> {
+  const agentos = await getAgentOS();
+  const runtime = agentos as AgentOSInstance & {
+    retrievalAugmentor?: WorkbenchRetrievalAugmentor;
+    ragVectorStoreManager?: WorkbenchVectorStoreManager;
+  };
+
+  return {
+    agentos,
+    retrievalAugmentor: runtime.retrievalAugmentor ?? null,
+    vectorStoreManager: runtime.ragVectorStoreManager ?? null,
+    modelProviderManager:
+      typeof agentos.getModelProviderManager === 'function'
+        ? (agentos.getModelProviderManager() as WorkbenchModelProviderManager)
+        : null,
+  };
+}
+
+export async function persistAgentOSRuntimeRag(): Promise<void> {
+  const { vectorStoreManager } = await getAgentOSRagRuntime();
+  const provider = vectorStoreManager?.getProvider?.(WORKBENCH_RUNTIME_RAG_PROVIDER_ID) as
+    | {
+        saveToFile?: (filePath: string) => Promise<void>;
+      }
+    | undefined;
+
+  if (provider?.saveToFile) {
+    await provider.saveToFile(WORKBENCH_RUNTIME_RAG_VECTOR_PERSIST_PATH);
+  }
+}
+
+export async function shutdownAgentOS(): Promise<void> {
+  if (!agentosInstance?.shutdown) {
+    return;
+  }
+  await agentosInstance.shutdown();
 }

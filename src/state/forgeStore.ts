@@ -23,6 +23,7 @@
  */
 
 import { create } from 'zustand';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,6 +82,8 @@ interface ForgeState {
   tools: ForgedTool[];
   /** Currently selected tool ID in the test runner (null if none). */
   selectedToolId: string | null;
+  /** Source mode for the current forge surface data. */
+  dataMode: WorkbenchDataMode;
 
   /** Prepend a new forge request to the queue. */
   addRequest: (req: ForgeRequest) => void;
@@ -96,6 +99,10 @@ interface ForgeState {
   setSelectedToolId: (id: string | null) => void;
   /** Replace the entire tools list (used after backend refresh). */
   setTools: (tools: ForgedTool[]) => void;
+  /** Replace backend tools and preserve backend-reported mode metadata. */
+  applyBackendTools: (tools: ForgedTool[], mode?: WorkbenchDataMode) => void;
+  /** Set the current source mode for the forge surface. */
+  setDataMode: (mode: WorkbenchDataMode) => void;
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -103,20 +110,18 @@ export const useForgeStore = create<ForgeState>((set) => ({
   verdicts: [],
   tools: [],
   selectedToolId: null,
+  dataMode: 'demo',
 
-  addRequest: (req) =>
-    set((s) => ({ requests: [req, ...s.requests] })),
+  addRequest: (req) => set((s) => ({ requests: [req, ...s.requests] })),
 
   updateRequest: (id, patch) =>
     set((s) => ({
       requests: s.requests.map((r) => (r.id === id ? { ...r, ...patch } : r)),
     })),
 
-  addVerdict: (verdict) =>
-    set((s) => ({ verdicts: [verdict, ...s.verdicts] })),
+  addVerdict: (verdict) => set((s) => ({ verdicts: [verdict, ...s.verdicts] })),
 
-  addTool: (tool) =>
-    set((s) => ({ tools: [tool, ...s.tools] })),
+  addTool: (tool) => set((s) => ({ tools: [tool, ...s.tools] })),
 
   promoteTool: (id, tier) =>
     set((s) => ({
@@ -126,4 +131,10 @@ export const useForgeStore = create<ForgeState>((set) => ({
   setSelectedToolId: (id) => set({ selectedToolId: id }),
 
   setTools: (tools) => set({ tools }),
+  applyBackendTools: (tools, mode = 'demo') =>
+    set({
+      tools,
+      dataMode: mode,
+    }),
+  setDataMode: (dataMode) => set({ dataMode }),
 }));

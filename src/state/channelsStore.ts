@@ -29,6 +29,7 @@
  */
 
 import { create } from 'zustand';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,7 +86,12 @@ function makeChannel(
 
 const INITIAL_CHANNELS: ChannelInfo[] = [
   // Social
-  makeChannel('twitter', 'Twitter / X', 'social', ['apiKey', 'apiSecret', 'accessToken', 'accessSecret']),
+  makeChannel('twitter', 'Twitter / X', 'social', [
+    'apiKey',
+    'apiSecret',
+    'accessToken',
+    'accessSecret',
+  ]),
   makeChannel('linkedin', 'LinkedIn', 'social', ['clientId', 'clientSecret', 'accessToken']),
   makeChannel('facebook', 'Facebook', 'social', ['pageAccessToken', 'pageId']),
   makeChannel('instagram', 'Instagram', 'social', ['accessToken', 'accountId']),
@@ -99,7 +105,11 @@ const INITIAL_CHANNELS: ChannelInfo[] = [
   makeChannel('discord', 'Discord', 'messaging', ['botToken', 'guildId', 'channelId']),
   makeChannel('slack', 'Slack', 'messaging', ['botToken', 'signingSecret', 'channelId']),
   makeChannel('telegram', 'Telegram', 'messaging', ['botToken', 'chatId']),
-  makeChannel('whatsapp', 'WhatsApp', 'messaging', ['phoneNumberId', 'accessToken', 'webhookSecret']),
+  makeChannel('whatsapp', 'WhatsApp', 'messaging', [
+    'phoneNumberId',
+    'accessToken',
+    'webhookSecret',
+  ]),
   makeChannel('line', 'LINE', 'messaging', ['channelAccessToken', 'channelSecret']),
   makeChannel('wechat', 'WeChat', 'messaging', ['appId', 'appSecret', 'token']),
   makeChannel('viber', 'Viber', 'messaging', ['authToken']),
@@ -109,7 +119,12 @@ const INITIAL_CHANNELS: ChannelInfo[] = [
   // Video
   makeChannel('youtube', 'YouTube', 'video', ['apiKey', 'channelId', 'accessToken']),
   makeChannel('tiktok', 'TikTok', 'video', ['clientKey', 'clientSecret', 'accessToken']),
-  makeChannel('twitch', 'Twitch', 'video', ['clientId', 'clientSecret', 'accessToken', 'channelName']),
+  makeChannel('twitch', 'Twitch', 'video', [
+    'clientId',
+    'clientSecret',
+    'accessToken',
+    'channelName',
+  ]),
   makeChannel('vimeo', 'Vimeo', 'video', ['accessToken']),
   makeChannel('rumble', 'Rumble', 'video', ['apiKey']),
 
@@ -122,13 +137,22 @@ const INITIAL_CHANNELS: ChannelInfo[] = [
   makeChannel('substack', 'Substack', 'blog', ['email', 'password']),
 
   // Community
-  makeChannel('reddit', 'Reddit', 'community', ['clientId', 'clientSecret', 'username', 'password']),
+  makeChannel('reddit', 'Reddit', 'community', [
+    'clientId',
+    'clientSecret',
+    'username',
+    'password',
+  ]),
   makeChannel('farcaster', 'Farcaster', 'community', ['privateKey', 'fid']),
   makeChannel('lemmy', 'Lemmy', 'community', ['instanceUrl', 'username', 'password']),
   makeChannel('nostr', 'Nostr', 'community', ['privateKey', 'relayUrl']),
 
   // Business
-  makeChannel('googlebusiness', 'Google Business', 'business', ['accountId', 'locationId', 'accessToken']),
+  makeChannel('googlebusiness', 'Google Business', 'business', [
+    'accountId',
+    'locationId',
+    'accessToken',
+  ]),
   makeChannel('gmb', 'Google My Business', 'business', ['accessToken', 'locationName']),
   makeChannel('shopify', 'Shopify', 'business', ['shopUrl', 'accessToken']),
   makeChannel('hubspot', 'HubSpot', 'business', ['accessToken', 'portalId']),
@@ -144,6 +168,8 @@ interface ChannelsState {
   channels: ChannelInfo[];
   /** Cross-channel message log, newest first (max 200). */
   messages: ChannelMessage[];
+  /** Source mode for the currently displayed channel state. */
+  dataMode: WorkbenchDataMode;
   /** True while fetching status from the backend. */
   loading: boolean;
   /** Last fetch error message, or null. */
@@ -151,12 +177,16 @@ interface ChannelsState {
 
   /** Replace the full channels list (after backend refresh). */
   setChannels: (channels: ChannelInfo[]) => void;
+  /** Apply a backend refresh and preserve the backend-reported data mode. */
+  applyBackendSnapshot: (channels: ChannelInfo[], mode?: WorkbenchDataMode) => void;
   /** Patch a single channel by ID (status, credentials, etc.). */
   updateChannel: (id: string, patch: Partial<ChannelInfo>) => void;
   /** Prepend a message to the log (capped at 200). */
   addMessage: (msg: ChannelMessage) => void;
   /** Replace the full message log. */
   setMessages: (msgs: ChannelMessage[]) => void;
+  /** Set the current data mode for the channels panel. */
+  setDataMode: (mode: WorkbenchDataMode) => void;
   /** Set the loading flag. */
   setLoading: (loading: boolean) => void;
   /** Set or clear the error message. */
@@ -166,20 +196,26 @@ interface ChannelsState {
 export const useChannelsStore = create<ChannelsState>((set) => ({
   channels: INITIAL_CHANNELS,
   messages: [],
+  dataMode: 'demo',
   loading: false,
   error: null,
 
   setChannels: (channels) => set({ channels }),
+  applyBackendSnapshot: (channels, mode = 'demo') =>
+    set({
+      channels,
+      dataMode: mode,
+    }),
 
   updateChannel: (id, patch) =>
     set((s) => ({
       channels: s.channels.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     })),
 
-  addMessage: (msg) =>
-    set((s) => ({ messages: [msg, ...s.messages].slice(0, 200) })),
+  addMessage: (msg) => set((s) => ({ messages: [msg, ...s.messages].slice(0, 200) })),
 
   setMessages: (msgs) => set({ messages: msgs }),
+  setDataMode: (dataMode) => set({ dataMode }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 }));

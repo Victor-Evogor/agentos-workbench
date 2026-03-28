@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getVoiceStatus, type VoiceStatusResponse } from '@/lib/agentosClient';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,6 +95,9 @@ interface VoiceState {
   /** Active voice sessions reported by the runtime. */
   sessions: VoiceSession[];
 
+  /** Source mode for the currently displayed status data. */
+  dataMode: WorkbenchDataMode;
+
   /** True while a fetch is in flight. */
   loading: boolean;
 
@@ -121,32 +125,32 @@ interface VoiceState {
 
 const DEFAULT_PROVIDERS: VoiceProviders = {
   stt: [
-    { id: 'deepgram',    name: 'Deepgram',    configured: false, envVar: 'DEEPGRAM_API_KEY'    },
-    { id: 'openai-stt',  name: 'OpenAI STT',  configured: false, envVar: 'OPENAI_API_KEY'      },
-    { id: 'assemblyai',  name: 'AssemblyAI',  configured: false, envVar: 'ASSEMBLYAI_API_KEY'  },
-    { id: 'whisper',     name: 'Whisper',     configured: false, envVar: 'OPENAI_API_KEY'      },
+    { id: 'deepgram', name: 'Deepgram', configured: false, envVar: 'DEEPGRAM_API_KEY' },
+    { id: 'openai-stt', name: 'OpenAI STT', configured: false, envVar: 'OPENAI_API_KEY' },
+    { id: 'assemblyai', name: 'AssemblyAI', configured: false, envVar: 'ASSEMBLYAI_API_KEY' },
+    { id: 'whisper', name: 'Whisper', configured: false, envVar: 'OPENAI_API_KEY' },
   ],
   tts: [
-    { id: 'elevenlabs',  name: 'ElevenLabs',  configured: false, envVar: 'ELEVENLABS_API_KEY'  },
-    { id: 'openai-tts',  name: 'OpenAI TTS',  configured: false, envVar: 'OPENAI_API_KEY'      },
-    { id: 'cartesia',    name: 'Cartesia',    configured: false, envVar: 'CARTESIA_API_KEY'    },
-    { id: 'playht',      name: 'PlayHT',      configured: false, envVar: 'PLAYHT_API_KEY'      },
+    { id: 'elevenlabs', name: 'ElevenLabs', configured: false, envVar: 'ELEVENLABS_API_KEY' },
+    { id: 'openai-tts', name: 'OpenAI TTS', configured: false, envVar: 'OPENAI_API_KEY' },
+    { id: 'cartesia', name: 'Cartesia', configured: false, envVar: 'CARTESIA_API_KEY' },
+    { id: 'playht', name: 'PlayHT', configured: false, envVar: 'PLAYHT_API_KEY' },
   ],
   telephony: [
-    { id: 'twilio',  name: 'Twilio',  configured: false, envVar: 'TWILIO_ACCOUNT_SID'  },
-    { id: 'telnyx',  name: 'Telnyx',  configured: false, envVar: 'TELNYX_API_KEY'       },
-    { id: 'plivo',   name: 'Plivo',   configured: false, envVar: 'PLIVO_AUTH_ID'        },
+    { id: 'twilio', name: 'Twilio', configured: false, envVar: 'TWILIO_ACCOUNT_SID' },
+    { id: 'telnyx', name: 'Telnyx', configured: false, envVar: 'TELNYX_API_KEY' },
+    { id: 'plivo', name: 'Plivo', configured: false, envVar: 'PLIVO_AUTH_ID' },
   ],
 };
 
 const DEFAULT_CONFIG: VoiceConfig = {
   endpointing: 'acoustic',
-  bargeIn:     'hard-cut',
+  bargeIn: 'hard-cut',
   diarization: false,
-  language:    'en-US',
-  voice:       'nova',
-  stt:         'deepgram',
-  tts:         'openai-tts',
+  language: 'en-US',
+  voice: 'nova',
+  stt: 'deepgram',
+  tts: 'openai-tts',
 };
 
 // ---------------------------------------------------------------------------
@@ -163,13 +167,13 @@ const DEFAULT_CONFIG: VoiceConfig = {
  */
 export const useVoiceStore = create<VoiceState>()((set) => ({
   providers: DEFAULT_PROVIDERS,
-  config:    DEFAULT_CONFIG,
-  sessions:  [],
-  loading:   false,
-  error:     null,
+  config: DEFAULT_CONFIG,
+  sessions: [],
+  dataMode: 'local',
+  loading: false,
+  error: null,
 
-  updateConfig: (partial) =>
-    set((s) => ({ config: { ...s.config, ...partial } })),
+  updateConfig: (partial) => set((s) => ({ config: { ...s.config, ...partial } })),
 
   setSessions: (sessions) => set({ sessions }),
 
@@ -183,26 +187,36 @@ export const useVoiceStore = create<VoiceState>()((set) => ({
       // Merge backend-reported configured flags onto the default provider list.
       const mergeConfigured = (
         defaults: VoiceProvider[],
-        reported: VoiceStatusResponse['providers']['stt'] | VoiceStatusResponse['providers']['tts'] | VoiceStatusResponse['providers']['telephony'],
+        reported:
+          | VoiceStatusResponse['providers']['stt']
+          | VoiceStatusResponse['providers']['tts']
+          | VoiceStatusResponse['providers']['telephony']
       ): VoiceProvider[] => {
         const reportedMap = new Map(reported.map((p) => [p.id, p.configured]));
         return defaults.map((d) => ({
           ...d,
-          configured: reportedMap.has(d.id) ? (reportedMap.get(d.id) ?? d.configured) : d.configured,
+          configured: reportedMap.has(d.id)
+            ? (reportedMap.get(d.id) ?? d.configured)
+            : d.configured,
         }));
       };
 
       set({
         loading: false,
+        dataMode: data.mode ?? 'mixed',
         providers: {
-          stt:       mergeConfigured(DEFAULT_PROVIDERS.stt,       data.providers.stt),
-          tts:       mergeConfigured(DEFAULT_PROVIDERS.tts,       data.providers.tts),
+          stt: mergeConfigured(DEFAULT_PROVIDERS.stt, data.providers.stt),
+          tts: mergeConfigured(DEFAULT_PROVIDERS.tts, data.providers.tts),
           telephony: mergeConfigured(DEFAULT_PROVIDERS.telephony, data.providers.telephony),
         },
         sessions: data.sessions ?? [],
       });
     } catch (e: unknown) {
-      set({ loading: false, error: (e as Error).message ?? 'Failed to fetch voice status' });
+      set({
+        loading: false,
+        dataMode: 'local',
+        error: (e as Error).message ?? 'Failed to fetch voice status',
+      });
     }
   },
 }));

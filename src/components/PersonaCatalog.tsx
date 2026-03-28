@@ -5,6 +5,7 @@ import { useSessionStore, type PersonaDefinition } from "@/state/sessionStore";
 import { persistPersonaRow } from "@/lib/storageBridge";
 import { PersonaWizard } from "./PersonaWizard";
 import { PersonaEditor } from "./PersonaEditor";
+import { HelpTooltip } from "./ui/HelpTooltip";
 
 function slugify(value: string) {
   return value
@@ -111,14 +112,21 @@ export function PersonaCatalog() {
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-xl border theme-border theme-bg-secondary-soft p-3 transition-colors duration-300">
       <header className="mb-3 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.4em] theme-text-muted">Persona catalog</p>
-          <h3 className="text-base font-semibold theme-text-primary">Define new AI characters</h3>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.4em] theme-text-muted">Persona catalog</p>
+            <h3 className="text-base font-semibold theme-text-primary">Define new AI characters</h3>
+          </div>
+          <HelpTooltip label="Explain persona catalog" side="bottom">
+            Create, filter, edit, and remove local personas. Remote personas stay read-only and refresh from the
+            backend, while local personas live in browser storage.
+          </HelpTooltip>
         </div>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setShowWizard(true)}
+            title="Open the guided persona wizard for full persona configuration."
             className="inline-flex items-center gap-1 rounded-full border border-sky-500 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-600 hover:bg-sky-100 dark:border-sky-400 dark:bg-sky-950 dark:text-sky-300"
           >
             <Wand2 className="h-3 w-3" />
@@ -142,7 +150,8 @@ export function PersonaCatalog() {
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button 
-                onClick={() => setShowDeleteModal(null)} 
+                onClick={() => setShowDeleteModal(null)}
+                title="Keep this persona and close the delete confirmation."
                 className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300"
               >
                 Cancel
@@ -151,7 +160,8 @@ export function PersonaCatalog() {
                 onClick={() => { 
                   if (showDeleteModal) removePersona(showDeleteModal); 
                   setShowDeleteModal(null); 
-                }} 
+                }}
+                title="Permanently remove this local persona from browser storage."
                 className="rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-700"
               >
                 Delete
@@ -172,6 +182,7 @@ export function PersonaCatalog() {
             value={personaFilters.search}
             onChange={handleSearchChange}
             placeholder="Design lead, operations, QA…"
+            title="Filter personas by name, description, tags, or traits."
             className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs normal-case tracking-normal text-slate-700 shadow-sm transition focus:border-sky-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </label>
@@ -185,6 +196,7 @@ export function PersonaCatalog() {
                   key={capability}
                   type="button"
                   onClick={() => toggleCapability(capability)}
+                  title={`${active ? 'Remove' : 'Add'} the ${label} capability filter.`}
                   className={clsx(
                     "rounded px-1.5 py-0.5 font-semibold uppercase tracking-wider transition",
                     active
@@ -203,6 +215,7 @@ export function PersonaCatalog() {
               <button
                 type="button"
                 onClick={clearFilters}
+                title="Clear the current persona search and capability filters."
                 className="rounded bg-rose-100 px-1.5 py-0.5 font-semibold uppercase text-rose-700 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-300"
               >
                 Clear
@@ -228,7 +241,7 @@ export function PersonaCatalog() {
                       onClick={() => setEditingPersona(persona)}
                       className="rounded-md p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                       aria-label={`Edit persona ${persona.displayName}`}
-                      title="Edit persona"
+                      title={`Edit ${persona.displayName}.`}
                     >
                       <Edit3 className="h-3 w-3" />
                     </button>
@@ -352,6 +365,7 @@ export function PersonaCatalog() {
           </div>
           <button
             type="submit"
+            title="Create a basic local persona from the fields above."
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:-translate-y-0.5"
           >
             <PlusCircle className="h-3.5 w-3.5" /> Add persona

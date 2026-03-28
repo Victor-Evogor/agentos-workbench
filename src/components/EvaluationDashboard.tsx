@@ -25,6 +25,7 @@ import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Tabs } from './ui/Tabs';
 import { Progress } from './ui/Progress';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 const DEFAULT_EVALUATION_API_ENDPOINT = (() => {
   const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
@@ -309,7 +310,12 @@ export function EvaluationDashboard({
                 {formatDuration(result.duration)}
               </td>
               <td className="px-4 py-3 text-right">
-                <Button variant="ghost" size="sm" aria-label={`View details for ${result.testCaseName}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`View details for ${result.testCaseName}`}
+                  title={`Inspect detailed metrics for ${result.testCaseName}.`}
+                >
                   <Eye className="w-4 h-4" />
                 </Button>
               </td>
@@ -365,7 +371,7 @@ export function EvaluationDashboard({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-medium">Test Cases ({testCases.length})</h3>
-        <Button size="sm">
+        <Button size="sm" title="Create a new evaluation test case definition.">
           <Plus className="w-4 h-4 mr-1" />
           Add Test Case
         </Button>
@@ -383,10 +389,20 @@ export function EvaluationDashboard({
                 </Badge>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" aria-label={`View test case ${tc.name}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`View test case ${tc.name}`}
+                  title={`Inspect the ${tc.name} test case details.`}
+                >
                   <Eye className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" aria-label={`Delete test case ${tc.name}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Delete test case ${tc.name}`}
+                  title={`Delete the ${tc.name} test case from the local evaluation set.`}
+                >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
               </div>
@@ -401,15 +417,29 @@ export function EvaluationDashboard({
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-divider">
-        <h1 className="text-xl font-semibold">Evaluation Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold">Evaluation Dashboard</h1>
+          <HelpTooltip label="Explain evaluation dashboard" side="bottom">
+            Run benchmark suites against the current agent behavior, inspect per-test outcomes, and compare run quality
+            over time. This panel is for repeatable evaluation, not live workflow debugging.
+          </HelpTooltip>
+        </div>
         <div className="flex items-center gap-2">
           {isRunning ? (
-            <Button variant="secondary" onClick={() => setIsRunning(false)}>
+            <Button
+              variant="secondary"
+              title="Stop the currently running evaluation progress in the workbench UI."
+              onClick={() => setIsRunning(false)}
+            >
               <Pause className="w-4 h-4 mr-2" />
               Stop
             </Button>
           ) : (
-            <Button onClick={startEvaluation} disabled={testCases.length === 0}>
+            <Button
+              title="Start a new evaluation run using the loaded test cases."
+              onClick={startEvaluation}
+              disabled={testCases.length === 0}
+            >
               <Play className="w-4 h-4 mr-2" />
               Run Evaluation
             </Button>
@@ -435,15 +465,15 @@ export function EvaluationDashboard({
         className="px-4 pt-2"
       >
         <Tabs.List>
-          <Tabs.Trigger value="runs">
+          <Tabs.Trigger value="runs" title="Browse and inspect recorded evaluation runs.">
             <BarChart2 className="w-4 h-4 mr-2" />
             Runs ({runs.length})
           </Tabs.Trigger>
-          <Tabs.Trigger value="test-cases">
+          <Tabs.Trigger value="test-cases" title="Inspect or curate the test cases used for evaluation runs.">
             <FileText className="w-4 h-4 mr-2" />
             Test Cases ({testCases.length})
           </Tabs.Trigger>
-          <Tabs.Trigger value="compare">
+          <Tabs.Trigger value="compare" title="Compare quality trends across multiple evaluation runs.">
             <TrendingUp className="w-4 h-4 mr-2" />
             Compare
           </Tabs.Trigger>
@@ -482,10 +512,20 @@ export function EvaluationDashboard({
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" aria-label="Export selected run">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label="Export selected run"
+                          title="Export the currently selected evaluation run."
+                        >
                           <Download className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" aria-label="Re-run selected evaluation">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label="Re-run selected evaluation"
+                          title="Start a fresh run using the selected evaluation as the template."
+                        >
                           <RotateCcw className="w-4 h-4" />
                         </Button>
                       </div>

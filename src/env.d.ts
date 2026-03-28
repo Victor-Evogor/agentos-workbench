@@ -17,3 +17,37 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module "@framers/sql-storage-adapter/adapters/indexedDbAdapter" {
+  import type {
+    StorageAdapter,
+    StorageCapability,
+    StorageOpenOptions,
+    StorageParameters,
+    StorageRunResult
+  } from "@framers/sql-storage-adapter/types";
+
+  export interface IndexedDbAdapterOptions {
+    dbName?: string;
+    storeName?: string;
+    autoSave?: boolean;
+    saveIntervalMs?: number;
+    sqlJsConfig?: unknown;
+  }
+
+  export class IndexedDbAdapter implements StorageAdapter {
+    readonly kind: string;
+    readonly capabilities: ReadonlySet<StorageCapability>;
+    constructor(options?: IndexedDbAdapterOptions);
+    open(options?: StorageOpenOptions): Promise<void>;
+    run(statement: string, parameters?: StorageParameters): Promise<StorageRunResult>;
+    get<T = unknown>(statement: string, parameters?: StorageParameters): Promise<T | null>;
+    all<T = unknown>(statement: string, parameters?: StorageParameters): Promise<T[]>;
+    exec(script: string): Promise<void>;
+    transaction<T>(fn: (trx: StorageAdapter) => Promise<T>): Promise<T>;
+    beginTransaction(): Promise<void>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
+    close(): Promise<void>;
+  }
+}

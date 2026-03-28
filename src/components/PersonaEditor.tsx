@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Save, X, Shield, Plug, Settings2, User } from 'lucide-react';
 import { useSessionStore, type PersonaDefinition } from '@/state/sessionStore';
+import { HelpTooltip } from './ui/HelpTooltip';
 /** Inline type for persona guardrail config (replaces deleted GuardrailManager export) */
 type SerializableGuardrail = {
   id: string;
@@ -57,13 +58,20 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
       <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900">
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-white/10 dark:bg-slate-900">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit Persona</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{persona.id}</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit Persona</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{persona.id}</p>
+            </div>
+            <HelpTooltip label="Explain persona editor" side="bottom">
+              Adjust persona identity, prompts, model preferences, guardrails, and attached extensions for the selected
+              local persona.
+            </HelpTooltip>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleSave}
+              title="Save the current persona changes and close the editor."
               className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600"
             >
               <Save className="h-4 w-4" />
@@ -158,6 +166,7 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
                 value={draft.baseSystemPrompt}
                 onChange={(e) => setDraft(d => ({ ...d, baseSystemPrompt: e.target.value }))}
                 rows={4}
+                title="Set the base system prompt that shapes this persona's behavior."
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono dark:border-white/10 dark:bg-slate-950"
                 placeholder="You are a helpful research assistant..."
               />
@@ -168,6 +177,7 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
                 <input
                   value={draft.modelPreference}
                   onChange={(e) => setDraft(d => ({ ...d, modelPreference: e.target.value }))}
+                  title="Prefer a specific model when this persona is selected."
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950"
                   placeholder="gpt-4o-mini"
                 />
@@ -177,6 +187,7 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
                 <select
                   value={draft.costSavingStrategy}
                   onChange={(e) => setDraft(d => ({ ...d, costSavingStrategy: e.target.value }))}
+                  title="Choose how this persona should trade off quality and cost."
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950"
                 >
                   <option value="">Default</option>
@@ -197,6 +208,7 @@ export function PersonaEditor({ persona, onClose }: PersonaEditorProps) {
                       maxTokens: Number.isNaN(numeric) || e.target.value === '' ? '' : numeric
                     }));
                   }}
+                  title="Cap the maximum completion length this persona should request."
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950"
                   placeholder="8192"
                 />

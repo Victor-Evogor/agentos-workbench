@@ -230,7 +230,9 @@ export function ImageEditingPanel() {
           );
         })}
         <div className="ml-auto">
-          <HelpTooltip text="Image Editing: edit (img2img/inpainting), upscale (2x/4x), and create variations." />
+          <HelpTooltip label="Explain image editing panel" side="bottom">
+            Image Editing: edit (img2img/inpainting), upscale (2x/4x), and create variations.
+          </HelpTooltip>
         </div>
       </div>
 

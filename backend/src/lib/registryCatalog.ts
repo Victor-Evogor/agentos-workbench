@@ -322,7 +322,7 @@ async function loadWorkspaceSkills(secretEnvMap: Record<string, string>): Promis
   }));
 
   return skills.filter(
-    (skill): skill is WorkbenchSkillInfo => skill !== null
+    (skill) => skill !== null
   ) as WorkbenchSkillInfo[];
 }
 

@@ -26,6 +26,38 @@ const STEP_STATUS_TYPES: PlanStepStatus[] = [
 
 const PLAN_STATUS_TYPES: PlanStatus[] = ['draft', 'executing', 'paused', 'completed', 'failed'];
 
+const planStepSchema = {
+  type: 'object',
+  properties: {
+    stepId: { type: 'string' },
+    description: { type: 'string' },
+    actionType: { type: 'string', enum: STEP_ACTION_TYPES },
+    toolId: { type: 'string' },
+    status: { type: 'string', enum: STEP_STATUS_TYPES },
+    dependsOn: { type: 'array', items: { type: 'string' } },
+    estimatedTokens: { type: 'number' },
+    confidence: { type: 'number' },
+    output: {},
+    error: { type: 'string' },
+    durationMs: { type: 'number' },
+  },
+} as const;
+
+const checkpointSchema = {
+  type: 'object',
+  properties: {
+    checkpointId: { type: 'string' },
+    timestamp: { type: 'string' },
+    reason: { type: 'string' },
+    status: { type: 'string', enum: PLAN_STATUS_TYPES },
+    currentStepIndex: { type: 'number' },
+    steps: {
+      type: 'array',
+      items: planStepSchema,
+    },
+  },
+} as const;
+
 const planSchema = {
   type: 'object',
   properties: {
@@ -33,22 +65,7 @@ const planSchema = {
     goal: { type: 'string' },
     steps: {
       type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          stepId: { type: 'string' },
-          description: { type: 'string' },
-          actionType: { type: 'string', enum: STEP_ACTION_TYPES },
-          toolId: { type: 'string' },
-          status: { type: 'string', enum: STEP_STATUS_TYPES },
-          dependsOn: { type: 'array', items: { type: 'string' } },
-          estimatedTokens: { type: 'number' },
-          confidence: { type: 'number' },
-          output: {},
-          error: { type: 'string' },
-          durationMs: { type: 'number' },
-        },
-      },
+      items: planStepSchema,
     },
     estimatedTokens: { type: 'number' },
     confidenceScore: { type: 'number' },
@@ -56,6 +73,14 @@ const planSchema = {
     updatedAt: { type: 'string' },
     status: { type: 'string', enum: PLAN_STATUS_TYPES },
     currentStepIndex: { type: 'number' },
+    source: { type: 'string', enum: ['manual', 'runtime'] },
+    readOnly: { type: 'boolean' },
+    conversationId: { type: 'string' },
+    workflowId: { type: 'string' },
+    checkpoints: {
+      type: 'array',
+      items: checkpointSchema,
+    },
   },
 } as const;
 
@@ -220,6 +245,91 @@ export default async function planningRoutes(fastify: FastifyInstance) {
     const plan = planningStore.rerunPlan(request.params.planId);
     if (!plan) {
       return reply.status(404).send({ message: 'Plan not found' });
+    }
+    return plan;
+  });
+
+  fastify.post<{ Params: { planId: string; checkpointId: string } }>('/plans/:planId/checkpoints/:checkpointId/restore', {
+    schema: {
+      description: 'Restore a manual plan to a recorded checkpoint snapshot',
+      tags: ['Planning'],
+      params: {
+        type: 'object',
+        properties: {
+          planId: { type: 'string' },
+          checkpointId: { type: 'string' },
+        },
+        required: ['planId', 'checkpointId'],
+      },
+      response: {
+        200: planSchema,
+        404: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+          },
+        },
+        409: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const existing = planningStore.getPlan(request.params.planId);
+    if (!existing) {
+      return reply.status(404).send({ message: 'Plan not found' });
+    }
+    if (!(existing.checkpoints ?? []).some((checkpoint) => checkpoint.checkpointId === request.params.checkpointId)) {
+      return reply.status(404).send({ message: 'Checkpoint not found' });
+    }
+    if (existing.readOnly) {
+      return reply.status(409).send({
+        message: 'Runtime-backed plans are read-only. Fork the checkpoint into a manual plan instead.',
+      });
+    }
+    const plan = planningStore.restoreCheckpoint(request.params.planId, request.params.checkpointId);
+    if (!plan) {
+      return reply.status(404).send({ message: 'Checkpoint not found' });
+    }
+    return plan;
+  });
+
+  fastify.post<{ Params: { planId: string; checkpointId: string } }>('/plans/:planId/checkpoints/:checkpointId/fork', {
+    schema: {
+      description: 'Fork a checkpoint snapshot into a new editable manual plan',
+      tags: ['Planning'],
+      params: {
+        type: 'object',
+        properties: {
+          planId: { type: 'string' },
+          checkpointId: { type: 'string' },
+        },
+        required: ['planId', 'checkpointId'],
+      },
+      response: {
+        200: planSchema,
+        404: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const existing = planningStore.getPlan(request.params.planId);
+    if (!existing) {
+      return reply.status(404).send({ message: 'Plan not found' });
+    }
+    if (!(existing.checkpoints ?? []).some((checkpoint) => checkpoint.checkpointId === request.params.checkpointId)) {
+      return reply.status(404).send({ message: 'Checkpoint not found' });
+    }
+    const plan = planningStore.forkCheckpoint(request.params.planId, request.params.checkpointId);
+    if (!plan) {
+      return reply.status(404).send({ message: 'Checkpoint not found' });
     }
     return plan;
   });

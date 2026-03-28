@@ -89,6 +89,8 @@ export interface OtelSpan {
   startedAt: string;
 }
 
+export type ObservabilityDataMode = 'runtime' | 'demo';
+
 // ---------------------------------------------------------------------------
 // State interface
 // ---------------------------------------------------------------------------
@@ -97,6 +99,7 @@ interface ObservabilityState {
   summary: ObsSummary | null;
   errors: ErrorLogEntry[];
   spans: OtelSpan[];
+  dataMode: ObservabilityDataMode;
   loading: boolean;
   error: string | null;
 
@@ -126,32 +129,107 @@ const DEMO_SUMMARY: ObsSummary = {
   monthSpentUsd: 4.73,
   dailyTokens: [82_000, 95_000, 110_000, 178_000, 204_000, 312_000, 501_310],
   providerCosts: [
-    { provider: 'OpenAI',    costUsd: 2.18, requestCount: 1_420 },
-    { provider: 'Anthropic', costUsd: 1.42, requestCount:   830 },
-    { provider: 'Deepgram',  costUsd: 0.74, requestCount:   391 },
-    { provider: 'ElevenLabs',costUsd: 0.39, requestCount:   200 },
+    { provider: 'OpenAI', costUsd: 2.18, requestCount: 1_420 },
+    { provider: 'Anthropic', costUsd: 1.42, requestCount: 830 },
+    { provider: 'Deepgram', costUsd: 0.74, requestCount: 391 },
+    { provider: 'ElevenLabs', costUsd: 0.39, requestCount: 200 },
   ],
   providerHealth: [
-    { provider: 'OpenAI',    status: 'ok',       latencyMs: 312, checkedAt: new Date(NOW - 30_000).toISOString() },
-    { provider: 'Anthropic', status: 'degraded', latencyMs: 890, checkedAt: new Date(NOW - 30_000).toISOString() },
-    { provider: 'Deepgram',  status: 'ok',       latencyMs: 145, checkedAt: new Date(NOW - 30_000).toISOString() },
-    { provider: 'ElevenLabs',status: 'ok',       latencyMs: 203, checkedAt: new Date(NOW - 30_000).toISOString() },
-    { provider: 'Qdrant',    status: 'down',     latencyMs: 0,   checkedAt: new Date(NOW - 30_000).toISOString() },
+    {
+      provider: 'OpenAI',
+      status: 'ok',
+      latencyMs: 312,
+      checkedAt: new Date(NOW - 30_000).toISOString(),
+    },
+    {
+      provider: 'Anthropic',
+      status: 'degraded',
+      latencyMs: 890,
+      checkedAt: new Date(NOW - 30_000).toISOString(),
+    },
+    {
+      provider: 'Deepgram',
+      status: 'ok',
+      latencyMs: 145,
+      checkedAt: new Date(NOW - 30_000).toISOString(),
+    },
+    {
+      provider: 'ElevenLabs',
+      status: 'ok',
+      latencyMs: 203,
+      checkedAt: new Date(NOW - 30_000).toISOString(),
+    },
+    {
+      provider: 'Qdrant',
+      status: 'down',
+      latencyMs: 0,
+      checkedAt: new Date(NOW - 30_000).toISOString(),
+    },
   ],
 };
 
 const DEMO_ERRORS: ErrorLogEntry[] = [
-  { id: 'err-1', timestamp: new Date(NOW - 2 * 60_000).toISOString(),  provider: 'Anthropic', errorMessage: 'Rate limit exceeded (429)',           requestId: 'req_a1b2', statusCode: 429 },
-  { id: 'err-2', timestamp: new Date(NOW - 8 * 60_000).toISOString(),  provider: 'OpenAI',    errorMessage: 'Context length exceeded (max_tokens)', requestId: 'req_c3d4', statusCode: 400 },
-  { id: 'err-3', timestamp: new Date(NOW - 18 * 60_000).toISOString(), provider: 'Qdrant',    errorMessage: 'Connection refused',                   requestId: 'req_e5f6' },
+  {
+    id: 'err-1',
+    timestamp: new Date(NOW - 2 * 60_000).toISOString(),
+    provider: 'Anthropic',
+    errorMessage: 'Rate limit exceeded (429)',
+    requestId: 'req_a1b2',
+    statusCode: 429,
+  },
+  {
+    id: 'err-2',
+    timestamp: new Date(NOW - 8 * 60_000).toISOString(),
+    provider: 'OpenAI',
+    errorMessage: 'Context length exceeded (max_tokens)',
+    requestId: 'req_c3d4',
+    statusCode: 400,
+  },
+  {
+    id: 'err-3',
+    timestamp: new Date(NOW - 18 * 60_000).toISOString(),
+    provider: 'Qdrant',
+    errorMessage: 'Connection refused',
+    requestId: 'req_e5f6',
+  },
 ];
 
 const DEMO_SPANS: OtelSpan[] = [
-  { spanId: 'sp-001', spanName: 'agentos.chat.stream',       durationMs: 1420, status: 'ok',    startedAt: new Date(NOW - 1 * 60_000).toISOString() },
-  { spanId: 'sp-002', spanName: 'guardrail.pii.evaluate',    durationMs:   42, status: 'ok',    startedAt: new Date(NOW - 1 * 60_000 + 100).toISOString() },
-  { spanId: 'sp-003', spanName: 'rag.retrieval.search',      durationMs:  188, status: 'ok',    startedAt: new Date(NOW - 2 * 60_000).toISOString() },
-  { spanId: 'sp-004', spanName: 'tool.web_search.execute',   durationMs:  910, status: 'error', startedAt: new Date(NOW - 5 * 60_000).toISOString() },
-  { spanId: 'sp-005', spanName: 'agentos.agency.workflow',   durationMs: 8320, status: 'ok',    startedAt: new Date(NOW - 10 * 60_000).toISOString() },
+  {
+    spanId: 'sp-001',
+    spanName: 'agentos.chat.stream',
+    durationMs: 1420,
+    status: 'ok',
+    startedAt: new Date(NOW - 1 * 60_000).toISOString(),
+  },
+  {
+    spanId: 'sp-002',
+    spanName: 'guardrail.pii.evaluate',
+    durationMs: 42,
+    status: 'ok',
+    startedAt: new Date(NOW - 1 * 60_000 + 100).toISOString(),
+  },
+  {
+    spanId: 'sp-003',
+    spanName: 'rag.retrieval.search',
+    durationMs: 188,
+    status: 'ok',
+    startedAt: new Date(NOW - 2 * 60_000).toISOString(),
+  },
+  {
+    spanId: 'sp-004',
+    spanName: 'tool.web_search.execute',
+    durationMs: 910,
+    status: 'error',
+    startedAt: new Date(NOW - 5 * 60_000).toISOString(),
+  },
+  {
+    spanId: 'sp-005',
+    spanName: 'agentos.agency.workflow',
+    durationMs: 8320,
+    status: 'ok',
+    startedAt: new Date(NOW - 10 * 60_000).toISOString(),
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -162,6 +240,7 @@ export const useObservabilityStore = create<ObservabilityState>()((set) => ({
   summary: DEMO_SUMMARY,
   errors: DEMO_ERRORS,
   spans: DEMO_SPANS,
+  dataMode: 'demo',
   loading: false,
   error: null,
 
@@ -171,10 +250,18 @@ export const useObservabilityStore = create<ObservabilityState>()((set) => ({
       const base = resolveWorkbenchApiBaseUrl();
       const res = await fetch(`${base}/api/observability/summary`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as ObsSummary;
-      set({ loading: false, summary: data });
+      const data = (await res.json()) as ObsSummary & { mode?: ObservabilityDataMode };
+      set({
+        loading: false,
+        summary: data,
+        dataMode: data.mode ?? 'demo',
+      });
     } catch {
-      set({ loading: false, summary: DEMO_SUMMARY });
+      set({
+        loading: false,
+        summary: DEMO_SUMMARY,
+        dataMode: 'demo',
+      });
     }
   },
 
@@ -183,10 +270,19 @@ export const useObservabilityStore = create<ObservabilityState>()((set) => ({
       const base = resolveWorkbenchApiBaseUrl();
       const res = await fetch(`${base}/api/observability/errors`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { errors: ErrorLogEntry[] };
-      set({ errors: data.errors ?? DEMO_ERRORS });
+      const data = (await res.json()) as {
+        mode?: ObservabilityDataMode;
+        errors: ErrorLogEntry[];
+      };
+      set({
+        errors: data.errors ?? DEMO_ERRORS,
+        dataMode: data.mode ?? 'demo',
+      });
     } catch {
-      set({ errors: DEMO_ERRORS });
+      set({
+        errors: DEMO_ERRORS,
+        dataMode: 'demo',
+      });
     }
   },
 
@@ -195,10 +291,19 @@ export const useObservabilityStore = create<ObservabilityState>()((set) => ({
       const base = resolveWorkbenchApiBaseUrl();
       const res = await fetch(`${base}/api/observability/spans`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { spans: OtelSpan[] };
-      set({ spans: data.spans ?? DEMO_SPANS });
+      const data = (await res.json()) as {
+        mode?: ObservabilityDataMode;
+        spans: OtelSpan[];
+      };
+      set({
+        spans: data.spans ?? DEMO_SPANS,
+        dataMode: data.mode ?? 'demo',
+      });
     } catch {
-      set({ spans: DEMO_SPANS });
+      set({
+        spans: DEMO_SPANS,
+        dataMode: 'demo',
+      });
     }
   },
 }));

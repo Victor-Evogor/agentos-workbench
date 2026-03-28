@@ -54,6 +54,7 @@ interface CompareResult {
   toolCalls: ToolCallEntry[];
   usage: UsageInfo;
   latencyMs: number;
+  runtimeMode: PlaygroundRuntimeMode;
   error?: string;
 }
 
@@ -69,6 +70,9 @@ interface UsageInfo {
   totalTokens: number;
   estimatedCostUsd: number;
 }
+
+type PlaygroundRuntime = Record<string, unknown>;
+export type PlaygroundRuntimeMode = 'live' | 'stub';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -111,6 +115,7 @@ function buildStubResponse(prompt: string, config: PlaygroundConfig) {
   return {
     text: `[Playground stub — connect AgentOS for live responses]\n\nModel: ${model}\nSystem: ${sys.slice(0, 80)}…\nPrompt: ${prompt}`,
     toolCalls: [] as ToolCallEntry[],
+    runtimeMode: 'stub' as const,
     usage: {
       promptTokens,
       completionTokens,
@@ -118,6 +123,24 @@ function buildStubResponse(prompt: string, config: PlaygroundConfig) {
       estimatedCostUsd: estimateCost(promptTokens, completionTokens, model),
     } satisfies UsageInfo,
   };
+}
+
+export async function resolvePlaygroundRuntime(
+  getRuntime: () => Promise<unknown> = getAgentOS
+): Promise<PlaygroundRuntime | null> {
+  try {
+    const runtime = await getRuntime();
+    return runtime && typeof runtime === 'object' ? (runtime as PlaygroundRuntime) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getPlaygroundRuntimeMode(
+  runtime: PlaygroundRuntime | null,
+  methodName: 'streamText' | 'generateText'
+): PlaygroundRuntimeMode {
+  return runtime && typeof runtime[methodName] === 'function' ? 'live' : 'stub';
 }
 
 // ---------------------------------------------------------------------------
@@ -151,11 +174,14 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
     async (request: FastifyRequest<{ Body: RunRequestBody }>, reply: FastifyReply) => {
       const { prompt, config = {}, sessionId } = request.body;
       const startMs = Date.now();
+      const agentos = await resolvePlaygroundRuntime();
+      const runtimeMode = getPlaygroundRuntimeMode(agentos, 'streamText');
 
       reply.raw.setHeader('Content-Type', 'text/event-stream');
       reply.raw.setHeader('Cache-Control', 'no-cache');
       reply.raw.setHeader('Connection', 'keep-alive');
       reply.raw.setHeader('X-Accel-Buffering', 'no');
+      reply.raw.setHeader('X-AgentOS-Playground-Mode', runtimeMode);
       reply.raw.flushHeaders();
 
       function send(event: string, data: unknown) {
@@ -163,10 +189,11 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
       }
 
       try {
-        const agentos = getAgentOS() as unknown as Record<string, unknown> | null;
-
-        if (agentos && typeof agentos.streamText === 'function') {
-          const streamFn = agentos.streamText as (
+        if (runtimeMode === 'live') {
+          const liveRuntime = agentos as PlaygroundRuntime & {
+            streamText: (opts: Record<string, unknown>) => AsyncIterable<Record<string, unknown>>;
+          };
+          const streamFn = liveRuntime.streamText as (
             opts: Record<string, unknown>
           ) => AsyncIterable<Record<string, unknown>>;
 
@@ -209,7 +236,7 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
             totalTokens: promptTokens + completionTokens,
             estimatedCostUsd: estimateCost(promptTokens, completionTokens, config.model),
           };
-          send('done', { toolCalls, usage, latencyMs, sessionId });
+          send('done', { toolCalls, usage, latencyMs, sessionId, runtimeMode });
         } else {
           // AgentOS not available — emit stub chunks
           const stub = buildStubResponse(prompt, config);
@@ -220,11 +247,17 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
             await new Promise((r) => setTimeout(r, 5));
           }
           const latencyMs = Date.now() - startMs;
-          send('done', { toolCalls: stub.toolCalls, usage: stub.usage, latencyMs, sessionId });
+          send('done', {
+            toolCalls: stub.toolCalls,
+            usage: stub.usage,
+            latencyMs,
+            sessionId,
+            runtimeMode: stub.runtimeMode,
+          });
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        send('error', { message });
+        send('error', { message, runtimeMode });
       } finally {
         reply.raw.end();
       }
@@ -256,13 +289,18 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
     },
     async (request: FastifyRequest<{ Body: CompareRequestBody }>, reply: FastifyReply) => {
       const { prompt, configA, configB } = request.body;
+      const agentos = await resolvePlaygroundRuntime();
+      const runtimeMode = getPlaygroundRuntimeMode(agentos, 'generateText');
+      reply.header('X-AgentOS-Playground-Mode', runtimeMode);
 
       async function runConfig(config: PlaygroundConfig): Promise<CompareResult> {
         const startMs = Date.now();
         try {
-          const agentos = getAgentOS() as unknown as Record<string, unknown> | null;
-          if (agentos && typeof agentos.generateText === 'function') {
-            const genFn = agentos.generateText as (
+          if (runtimeMode === 'live') {
+            const liveRuntime = agentos as PlaygroundRuntime & {
+              generateText: (opts: Record<string, unknown>) => Promise<Record<string, unknown>>;
+            };
+            const genFn = liveRuntime.generateText as (
               opts: Record<string, unknown>
             ) => Promise<Record<string, unknown>>;
             const result = await genFn({
@@ -286,6 +324,7 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
                 estimatedCostUsd: estimateCost(promptTokens, completionTokens, config.model),
               },
               latencyMs: Date.now() - startMs,
+              runtimeMode,
             };
           }
           // Stub path
@@ -297,6 +336,7 @@ export default async function playgroundRoutes(fastify: FastifyInstance): Promis
             toolCalls: [],
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCostUsd: 0 },
             latencyMs: Date.now() - startMs,
+            runtimeMode,
             error: err instanceof Error ? err.message : String(err),
           };
         }

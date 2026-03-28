@@ -20,6 +20,7 @@ import {
 } from '../lib/agentosClient';
 import { SkillCard } from './SkillCard';
 import { SkillDetail as SkillDetailView } from './SkillDetail';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 /**
  * SkillBrowser renders either:
@@ -164,6 +165,7 @@ export function SkillBrowser() {
               <button
                 type="button"
                 onClick={() => setSelectedSkillName(null)}
+                title="Return to the skill catalog grid."
                 className="rounded-full border theme-border px-3 py-1 text-xs theme-text-secondary"
               >
                 Back to skills
@@ -192,6 +194,16 @@ export function SkillBrowser() {
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Skills</p>
+          <h3 className="text-sm font-semibold theme-text-primary">Skill catalog and toggles</h3>
+        </div>
+        <HelpTooltip label="Explain skill browser" side="bottom">
+          Search installed and available skills, filter by category, inspect prerequisites, and enable or disable
+          skills without leaving the settings area.
+        </HelpTooltip>
+      </div>
       {/* ------------------------------------------------------------------ */}
       {/* Toolbar: search + category filter + active count                   */}
       {/* ------------------------------------------------------------------ */}
@@ -202,6 +214,7 @@ export function SkillBrowser() {
           placeholder="Search skills…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          title="Filter skills by name, description, or tag."
           className={[
             'flex-1 rounded-md border theme-border theme-bg-primary',
             'px-2.5 py-1.5 text-xs theme-text-primary',
@@ -214,6 +227,7 @@ export function SkillBrowser() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
+          title="Restrict the catalog to a specific skill category."
           className={[
             'rounded-md border theme-border theme-bg-primary',
             'px-2.5 py-1.5 text-xs theme-text-secondary',

@@ -42,7 +42,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { resolveWorkbenchApiBaseUrl } from '@/lib/agentosClient';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 import {
   useForgeStore,
   type ForgeTier,
@@ -65,6 +67,28 @@ function buildBaseUrl(): string {
 
 function generateId(): string {
   return `forge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function resolveWorkbenchDataMode(value: unknown, fallback: WorkbenchDataMode): WorkbenchDataMode {
+  return value === 'runtime' || value === 'mixed' || value === 'demo' || value === 'local'
+    ? value
+    : fallback;
+}
+
+function extractModeFromText(responseText: string, fallback: WorkbenchDataMode): WorkbenchDataMode {
+  try {
+    const parsed = JSON.parse(responseText) as { mode?: unknown };
+    return resolveWorkbenchDataMode(parsed.mode, fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function forgeBadgeLabel(dataMode: WorkbenchDataMode): string {
+  if (dataMode === 'runtime') return 'Runtime Forge';
+  if (dataMode === 'mixed') return 'Mixed Forge';
+  if (dataMode === 'local') return 'Local Forge Fallback';
+  return 'Demo Forge';
 }
 
 const TIER_LABELS: Record<ForgeTier, string> = {
@@ -113,9 +137,7 @@ function VerdictCard({ verdict }: { verdict: JudgeVerdict }) {
     <div
       className={[
         'rounded-lg border px-3 py-2.5',
-        approved
-          ? 'border-emerald-500/30 bg-emerald-500/5'
-          : 'border-rose-500/30 bg-rose-500/5',
+        approved ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-rose-500/30 bg-rose-500/5',
       ].join(' ')}
     >
       <div className="flex items-center gap-2">
@@ -138,13 +160,15 @@ function VerdictCard({ verdict }: { verdict: JudgeVerdict }) {
       </div>
       <div className="mt-1.5 flex gap-3 text-[10px]">
         <span className="theme-text-muted">
-          Correct: <span className="font-semibold theme-text-primary">{verdict.scores.correctness}%</span>
+          Correct:{' '}
+          <span className="font-semibold theme-text-primary">{verdict.scores.correctness}%</span>
         </span>
         <span className="theme-text-muted">
           Safety: <span className="font-semibold theme-text-primary">{verdict.scores.safety}%</span>
         </span>
         <span className="theme-text-muted">
-          Efficiency: <span className="font-semibold theme-text-primary">{verdict.scores.efficiency}%</span>
+          Efficiency:{' '}
+          <span className="font-semibold theme-text-primary">{verdict.scores.efficiency}%</span>
         </span>
       </div>
       <p className="mt-1 text-[10px] leading-relaxed theme-text-secondary">{verdict.reasoning}</p>
@@ -187,14 +211,19 @@ function ToolRegistryCard({
             {tool.description}
           </p>
           <div className="mt-1 flex flex-wrap gap-3 text-[10px] theme-text-muted">
-            <span>Calls: <span className="font-semibold theme-text-primary">{tool.callCount}</span></span>
+            <span>
+              Calls: <span className="font-semibold theme-text-primary">{tool.callCount}</span>
+            </span>
             <span>
               Success: <span className="font-semibold theme-text-primary">{tool.successRate}%</span>
             </span>
             <span>
-              Avg latency: <span className="font-semibold theme-text-primary">{tool.avgLatencyMs}ms</span>
+              Avg latency:{' '}
+              <span className="font-semibold theme-text-primary">{tool.avgLatencyMs}ms</span>
             </span>
-            <span className="theme-text-muted">{new Date(tool.createdAt).toLocaleDateString()}</span>
+            <span className="theme-text-muted">
+              {new Date(tool.createdAt).toLocaleDateString()}
+            </span>
           </div>
         </div>
       </div>
@@ -266,31 +295,40 @@ export function EmergentToolForge() {
   const verdicts = useForgeStore((s) => s.verdicts);
   const tools = useForgeStore((s) => s.tools);
   const selectedToolId = useForgeStore((s) => s.selectedToolId);
+  const dataMode = useForgeStore((s) => s.dataMode);
   const addRequest = useForgeStore((s) => s.addRequest);
   const updateRequest = useForgeStore((s) => s.updateRequest);
   const addVerdict = useForgeStore((s) => s.addVerdict);
   const addTool = useForgeStore((s) => s.addTool);
   const promoteTool = useForgeStore((s) => s.promoteTool);
   const setSelectedToolId = useForgeStore((s) => s.setSelectedToolId);
-  const setTools = useForgeStore((s) => s.setTools);
+  const applyBackendTools = useForgeStore((s) => s.applyBackendTools);
+  const setDataMode = useForgeStore((s) => s.setDataMode);
 
   const selectedTool = tools.find((t) => t.id === selectedToolId) ?? null;
 
   // Load forged tools on mount
-  const loadTools = useCallback(async (silent = false) => {
-    if (!silent) setLoadingTools(true);
-    try {
-      const base = buildBaseUrl();
-      const res = await fetch(`${base}/api/agency/forged-tools`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { tools?: ForgedTool[] };
-      setTools(data.tools ?? []);
-    } catch {
-      // Backend may be unavailable in dev; keep existing tools
-    } finally {
-      setLoadingTools(false);
-    }
-  }, [setTools]);
+  const loadTools = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoadingTools(true);
+      try {
+        const base = buildBaseUrl();
+        const res = await fetch(`${base}/api/agency/forged-tools`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as {
+          tools?: ForgedTool[];
+          mode?: WorkbenchDataMode;
+        };
+        applyBackendTools(data.tools ?? [], resolveWorkbenchDataMode(data.mode, 'demo'));
+      } catch {
+        setDataMode('local');
+        // Backend may be unavailable in dev; keep existing tools
+      } finally {
+        setLoadingTools(false);
+      }
+    },
+    [applyBackendTools, setDataMode]
+  );
 
   useEffect(() => {
     void loadTools();
@@ -332,7 +370,9 @@ export function EmergentToolForge() {
         tool?: ForgedTool;
         verdict?: JudgeVerdict;
         status?: string;
+        mode?: WorkbenchDataMode;
       };
+      setDataMode(resolveWorkbenchDataMode(data.mode, 'demo'));
 
       updateRequest(reqId, { status: data.verdict?.status ?? 'approved' });
 
@@ -344,6 +384,7 @@ export function EmergentToolForge() {
       }
       void loadTools(true);
     } catch (err) {
+      setDataMode('local');
       setError(err instanceof Error ? err.message : 'Forge request failed.');
       updateRequest(reqId, { status: 'rejected' });
       // Provide a local stub verdict so the UI doesn't appear empty
@@ -379,8 +420,19 @@ export function EmergentToolForge() {
         body: testInput,
       });
       const text = await res.text();
-      setTestOutput(res.ok ? text : `Error ${res.status}: ${text}`);
+      setDataMode(extractModeFromText(text, 'demo'));
+      if (res.ok) {
+        try {
+          const parsed = JSON.parse(text) as { result?: unknown };
+          setTestOutput(JSON.stringify(parsed.result ?? parsed, null, 2));
+        } catch {
+          setTestOutput(text);
+        }
+      } else {
+        setTestOutput(`Error ${res.status}: ${text}`);
+      }
     } catch (err) {
+      setDataMode('local');
       setTestOutput(`[error] ${err instanceof Error ? err.message : 'Test run failed.'}`);
     } finally {
       setTestRunning(false);
@@ -402,10 +454,11 @@ export function EmergentToolForge() {
             <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Tools</p>
             <h3 className="text-sm font-semibold theme-text-primary">Emergent Tool Forge</h3>
           </div>
+          <DataSourceBadge tone={dataMode} label={forgeBadgeLabel(dataMode)} className="shrink-0" />
           <HelpTooltip label="Explain tool forge" side="bottom">
             Describe a tool you need in natural language. The forge generates an implementation,
-            submits it to the judge, and — if approved — registers it in the Session tier.
-            Promote tools to Agent or Shared tiers as they prove reliable.
+            submits it to the judge, and — if approved — registers it in the Session tier. Promote
+            tools to Agent or Shared tiers as they prove reliable.
           </HelpTooltip>
         </div>
         <button
@@ -467,7 +520,8 @@ export function EmergentToolForge() {
 
           <div>
             <p className="mb-0.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
-              Parameters Schema <span className="normal-case text-[9px] opacity-60">(optional JSON Schema)</span>
+              Parameters Schema{' '}
+              <span className="normal-case text-[9px] opacity-60">(optional JSON Schema)</span>
             </p>
             <textarea
               rows={3}
@@ -485,11 +539,7 @@ export function EmergentToolForge() {
             disabled={submitting || !description.trim()}
             className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-violet-500/10 px-4 py-1.5 text-[10px] font-semibold text-violet-400 transition hover:bg-violet-500/20 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
           >
-            {submitting ? (
-              <Loader2 size={10} className="animate-spin" />
-            ) : (
-              <Hammer size={10} />
-            )}
+            {submitting ? <Loader2 size={10} className="animate-spin" /> : <Hammer size={10} />}
             {submitting ? 'Forging…' : 'Forge Tool'}
           </button>
 
@@ -638,11 +688,7 @@ export function EmergentToolForge() {
                 disabled={testRunning}
                 className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-[10px] font-semibold text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
-                {testRunning ? (
-                  <Loader2 size={10} className="animate-spin" />
-                ) : (
-                  <Play size={10} />
-                )}
+                {testRunning ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
                 {testRunning ? 'Running…' : 'Run Test'}
               </button>
 
@@ -664,15 +710,21 @@ export function EmergentToolForge() {
                 </p>
                 <div className="grid grid-cols-3 gap-2 text-[10px]">
                   <div className="text-center">
-                    <p className="text-base font-bold theme-text-primary">{selectedTool.callCount}</p>
+                    <p className="text-base font-bold theme-text-primary">
+                      {selectedTool.callCount}
+                    </p>
                     <p className="theme-text-muted">Calls</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-base font-bold theme-text-primary">{selectedTool.successRate}%</p>
+                    <p className="text-base font-bold theme-text-primary">
+                      {selectedTool.successRate}%
+                    </p>
                     <p className="theme-text-muted">Success</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-base font-bold theme-text-primary">{selectedTool.avgLatencyMs}ms</p>
+                    <p className="text-base font-bold theme-text-primary">
+                      {selectedTool.avgLatencyMs}ms
+                    </p>
                     <p className="theme-text-muted">Avg latency</p>
                   </div>
                 </div>

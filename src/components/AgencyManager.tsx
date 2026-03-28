@@ -6,6 +6,7 @@ import { useWorkflowDefinitions } from "@/hooks/useWorkflowDefinitions";
 import type { WorkflowDefinition } from "@/types/workflow";
 import { AgencyWizard } from "./AgencyWizard";
 import { AgencyHistoryView } from "./AgencyHistoryView";
+import { HelpTooltip } from "./ui/HelpTooltip";
 
 function slugify(value: string) {
   return value
@@ -163,9 +164,15 @@ export function AgencyManager() {
     <div className="flex h-full flex-col gap-3 overflow-hidden">
       <section className="flex-1 flex flex-col rounded-xl border theme-border theme-bg-secondary-soft p-3 overflow-y-auto transition-theme" data-tour="agency-manager">
       <header className="mb-3 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.4em] theme-text-muted">Agency manager</p>
-          <h3 className="text-base font-semibold theme-text-primary">Coordinate collectives</h3>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.4em] theme-text-muted">Agency manager</p>
+            <h3 className="text-base font-semibold theme-text-primary">Coordinate collectives</h3>
+          </div>
+          <HelpTooltip label="Explain agency manager" side="bottom">
+            Define multi-seat agencies, assign personas to roles, attach workflow definitions, and inspect live seat
+            activity or execution history for coordinated runs.
+          </HelpTooltip>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="rounded-full border theme-border px-2 py-0.5 text-[10px] theme-text-secondary">
@@ -174,6 +181,7 @@ export function AgencyManager() {
           <button
             type="button"
             onClick={() => setShowHistory(!showHistory)}
+            title={`${showHistory ? "Hide" : "Show"} agency execution history.`}
             className="inline-flex items-center gap-1 rounded-full border theme-border px-2 py-0.5 text-[10px] font-semibold theme-text-secondary transition hover:bg-slate-50 dark:hover:bg-slate-900"
           >
             <History className="h-3 w-3 text-purple-500" />
@@ -182,6 +190,7 @@ export function AgencyManager() {
           <button
             type="button"
             onClick={() => setShowWizard(true)}
+            title="Open the guided agency wizard for a fuller agency setup flow."
             className="inline-flex items-center gap-1 rounded-full border theme-border px-2 py-0.5 text-[10px] font-semibold theme-text-secondary transition hover:bg-slate-50 dark:hover:bg-slate-900"
           >
             <Sparkles className="h-3 w-3 text-sky-500" />
@@ -270,6 +279,7 @@ export function AgencyManager() {
               <button
                 type="button"
                 onClick={() => refetchWorkflows()}
+                title="Reload available workflow definitions from the backend."
                 className="inline-flex items-center gap-0.5 rounded-full border theme-border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.35em] transition hover:opacity-95"
               >
                 <RefreshCcw className="h-2.5 w-2.5" /> Refresh
@@ -281,6 +291,7 @@ export function AgencyManager() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
+              title="Set the display name for this agency."
               className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
               placeholder="Mission Automation Crew"
             />
@@ -291,6 +302,7 @@ export function AgencyManager() {
               value={goal}
               onChange={(event) => setGoal(event.target.value)}
               rows={2}
+              title="Describe the shared objective this agency should work toward."
               className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
               placeholder="Coordinate the release-readiness workflow..."
             />
@@ -300,6 +312,7 @@ export function AgencyManager() {
             <select
               value={workflowId}
               onChange={(event) => setWorkflowId(event.target.value)}
+              title="Choose a workflow definition to seed roles and execution metadata."
               className="w-full rounded-md border theme-border theme-bg-primary px-2 py-1.5 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
             >
               <option value="">{workflowsLoading ? "Loading..." : "Unassigned"}</option>
@@ -332,12 +345,14 @@ export function AgencyManager() {
                 <input
                   value={participant.roleId}
                   onChange={(event) => handleParticipantChange(index, "roleId", event.target.value)}
+                  title="Set the seat or role identifier for this participant."
                   className="flex-1 rounded border theme-border theme-bg-secondary px-2 py-1 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                   placeholder="planner"
                 />
                 <select
                   value={participant.personaId}
                   onChange={(event) => handleParticipantChange(index, "personaId", event.target.value)}
+                  title="Assign a persona to this agency seat."
                   className="flex-1 rounded border theme-border theme-bg-secondary px-2 py-1 text-xs theme-text-primary focus:border-sky-500 focus:outline-none"
                 >
                   <option value="">Unassigned</option>
@@ -360,6 +375,7 @@ export function AgencyManager() {
             <button
               type="button"
               onClick={handleAddParticipant}
+              title="Add another role/persona seat to this agency."
               className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.35em] theme-text-muted transition hover:opacity-95"
             >
               <Plus className="h-2.5 w-2.5" /> Add seat
@@ -367,6 +383,7 @@ export function AgencyManager() {
           </div>
           <button
             type="submit"
+            title="Create the agency with the current seats, workflow, and goal."
             className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full theme-bg-success px-3 py-1.5 text-xs font-semibold text-white transition hover:-translate-y-0.5"
           >
             <Users className="h-3.5 w-3.5" /> Launch agency
@@ -386,5 +403,4 @@ export function AgencyManager() {
     </div>
   );
 }
-
 

@@ -26,7 +26,7 @@
  *     Forwards the JSON payload to the given URL with a 10 s timeout.
  */
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply } from 'fastify';
 
 // ---------------------------------------------------------------------------
 // In-memory channel state registry
@@ -43,6 +43,14 @@ interface ChannelRecord {
   errorCount: number;
   rateLimitRemaining: number | null;
   credentials: Record<string, string>;
+}
+
+type ChannelsWorkbenchMode = 'demo' | 'mixed';
+
+export const WORKBENCH_CHANNELS_MODE_HEADER = 'X-AgentOS-Workbench-Mode';
+
+function markChannelsReply(reply: FastifyReply, mode: ChannelsWorkbenchMode): void {
+  reply.header(WORKBENCH_CHANNELS_MODE_HEADER, mode);
 }
 
 /** Canonical list of the 37 supported channel platforms. */
@@ -114,17 +122,23 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
         200: {
           type: 'object',
           properties: {
+            mode: { type: 'string' },
             channels: {
               type: 'array',
               items: { type: 'object', additionalProperties: true },
             },
           },
+          required: ['mode', 'channels'],
         },
       },
     },
-  }, async () => ({
-    channels: Array.from(channelState.values()),
-  }));
+  }, async (_request, reply) => {
+    markChannelsReply(reply, 'demo');
+    return {
+      mode: 'demo' as const,
+      channels: Array.from(channelState.values()),
+    };
+  });
 
   /** Connect a channel with the provided credentials. */
   fastify.post<{
@@ -148,23 +162,33 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
       response: {
         200: {
           type: 'object',
-          properties: { ok: { type: 'boolean' }, status: { type: 'string' } },
+          properties: {
+            mode: { type: 'string' },
+            ok: { type: 'boolean' },
+            status: { type: 'string' },
+          },
+          required: ['mode', 'ok', 'status'],
         },
         404: {
           type: 'object',
-          properties: { error: { type: 'string' } },
+          properties: {
+            mode: { type: 'string' },
+            error: { type: 'string' },
+          },
+          required: ['mode', 'error'],
         },
       },
     },
   }, async (req, reply) => {
     const channel = channelState.get(req.params.id);
-    if (!channel) return reply.code(404).send({ error: 'Channel not found' });
+    markChannelsReply(reply, 'demo');
+    if (!channel) return reply.code(404).send({ mode: 'demo', error: 'Channel not found' });
     channel.status = 'connected';
     channel.lastMessageAt = Date.now();
     if (req.body.credentials) {
       channel.credentials = { ...channel.credentials, ...req.body.credentials };
     }
-    return { ok: true, status: 'connected' };
+    return { mode: 'demo' as const, ok: true, status: 'connected' };
   });
 
   /** Disconnect a channel. */
@@ -180,14 +204,20 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
       response: {
         200: {
           type: 'object',
-          properties: { ok: { type: 'boolean' }, status: { type: 'string' } },
+          properties: {
+            mode: { type: 'string' },
+            ok: { type: 'boolean' },
+            status: { type: 'string' },
+          },
+          required: ['mode', 'ok', 'status'],
         },
       },
     },
-  }, async (req) => {
+  }, async (req, reply) => {
     const channel = channelState.get(req.params.id);
     if (channel) channel.status = 'disconnected';
-    return { ok: true, status: 'disconnected' };
+    markChannelsReply(reply, 'demo');
+    return { mode: 'demo' as const, ok: true, status: 'disconnected' };
   });
 
   /** Broadcast a message to multiple connected channels. */
@@ -208,11 +238,18 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
       response: {
         200: {
           type: 'object',
-          additionalProperties: true,
+          properties: {
+            mode: { type: 'string' },
+            ok: { type: 'boolean' },
+            results: { type: 'object', additionalProperties: { type: 'string' } },
+            text: { type: 'string' },
+            sentAt: { type: 'string' },
+          },
+          required: ['mode', 'ok', 'results', 'text', 'sentAt'],
         },
       },
     },
-  }, async (req) => {
+  }, async (req, reply) => {
     const { text, channelIds } = req.body;
     const results: Record<string, string> = {};
 
@@ -231,7 +268,14 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
       results[id] = 'sent';
     }
 
-    return { ok: true, results, text: text.slice(0, 100), sentAt: new Date().toISOString() };
+    markChannelsReply(reply, 'demo');
+    return {
+      mode: 'demo' as const,
+      ok: true,
+      results,
+      text: text.slice(0, 100),
+      sentAt: new Date().toISOString(),
+    };
   });
 
   /** Test a webhook endpoint by sending a custom payload. */
@@ -252,7 +296,30 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
       response: {
         200: {
           type: 'object',
-          additionalProperties: true,
+          properties: {
+            mode: { type: 'string' },
+            ok: { type: 'boolean' },
+            status: { type: 'number' },
+            statusText: { type: 'string' },
+            body: { type: 'string' },
+          },
+          required: ['mode', 'ok', 'status', 'statusText', 'body'],
+        },
+        400: {
+          type: 'object',
+          properties: {
+            mode: { type: 'string' },
+            error: { type: 'string' },
+          },
+          required: ['mode', 'error'],
+        },
+        502: {
+          type: 'object',
+          properties: {
+            mode: { type: 'string' },
+            error: { type: 'string' },
+          },
+          required: ['mode', 'error'],
         },
       },
     },
@@ -263,7 +330,8 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
     try {
       parsedPayload = JSON.parse(payload);
     } catch {
-      return reply.code(400).send({ error: 'Payload must be valid JSON.' });
+      markChannelsReply(reply, 'mixed');
+      return reply.code(400).send({ mode: 'mixed', error: 'Payload must be valid JSON.' });
     }
 
     try {
@@ -274,14 +342,18 @@ export default async function channelRoutes(fastify: FastifyInstance): Promise<v
         signal: AbortSignal.timeout(10_000),
       });
       const responseText = await response.text();
+      markChannelsReply(reply, 'mixed');
       return {
+        mode: 'mixed' as const,
         ok: response.ok,
         status: response.status,
         statusText: response.statusText,
         body: responseText.slice(0, 2000),
       };
     } catch (err) {
+      markChannelsReply(reply, 'mixed');
       return reply.code(502).send({
+        mode: 'mixed',
         error: `Webhook delivery failed: ${err instanceof Error ? err.message : String(err)}`,
       });
     }

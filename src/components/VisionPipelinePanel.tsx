@@ -213,7 +213,9 @@ export function VisionPipelinePanel() {
           );
         })}
         <div className="ml-auto">
-          <HelpTooltip text="Vision Pipeline: OCR, image description, and CLIP embeddings using a 3-tier progressive architecture." />
+          <HelpTooltip label="Explain vision pipeline panel" side="bottom">
+            Vision Pipeline: OCR, image description, and CLIP embeddings using a 3-tier progressive architecture.
+          </HelpTooltip>
         </div>
       </div>
 

@@ -67,6 +67,7 @@ test('evaluation routes expose expected run/result/test-case contracts', async (
 test('planning routes support lifecycle contract operations', async () => {
   const { app, cleanup } = await createServer();
   try {
+    const { planningStore } = await import('../src/services/planningStore');
     const plansResponse = await app.inject({ method: 'GET', url: '/api/planning/plans' });
     assert.equal(plansResponse.statusCode, 200);
     const initialPlans = plansResponse.json();
@@ -102,7 +103,20 @@ test('planning routes support lifecycle contract operations', async () => {
       url: `/api/planning/plans/${encodeURIComponent(plan.planId)}/advance`,
     });
     assert.equal(advanceResponse.statusCode, 200);
-    assert.ok(['executing', 'completed'].includes(advanceResponse.json().status));
+    const advancedPlan = advanceResponse.json();
+    assert.ok(['executing', 'completed'].includes(advancedPlan.status));
+    assert.ok(Array.isArray(advancedPlan.checkpoints));
+    assert.ok(advancedPlan.checkpoints.length >= 2);
+
+    const createdCheckpoint = advancedPlan.checkpoints.find((checkpoint: { reason?: string }) => checkpoint.reason === 'created');
+    assert.ok(createdCheckpoint);
+
+    const restoreResponse = await app.inject({
+      method: 'POST',
+      url: `/api/planning/plans/${encodeURIComponent(plan.planId)}/checkpoints/${encodeURIComponent(createdCheckpoint.checkpointId)}/restore`,
+    });
+    assert.equal(restoreResponse.statusCode, 200);
+    assert.equal(restoreResponse.json().readOnly, false);
 
     const rerunResponse = await app.inject({
       method: 'POST',
@@ -119,6 +133,29 @@ test('planning routes support lifecycle contract operations', async () => {
     });
     assert.equal(notFoundResponse.statusCode, 404);
     assert.equal(notFoundResponse.json().message, 'Plan not found');
+
+    const runtimePlan = planningStore.syncRuntimePlan({
+      planId: 'runtime-contract-plan',
+      goal: 'Runtime contract plan',
+      status: 'executing',
+      steps: [
+        {
+          stepId: 'runtime-step-1',
+          description: 'Collect runtime signals',
+          actionType: 'gmi_action',
+          status: 'in_progress',
+        },
+      ],
+    });
+    const runtimeCheckpointId = runtimePlan.checkpoints?.[0]?.checkpointId;
+    assert.ok(runtimeCheckpointId);
+
+    const forkResponse = await app.inject({
+      method: 'POST',
+      url: `/api/planning/plans/${encodeURIComponent(runtimePlan.planId)}/checkpoints/${encodeURIComponent(runtimeCheckpointId)}/fork`,
+    });
+    assert.equal(forkResponse.statusCode, 200);
+    assert.equal(forkResponse.json().readOnly, false);
   } finally {
     await app.close();
     cleanup();

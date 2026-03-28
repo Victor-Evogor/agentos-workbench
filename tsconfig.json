@@ -6,13 +6,19 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
   "include": ["src", "src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["dist", "node_modules", "src/lib/localAgentRuntime.ts", "src/lib/localWorkflowLibrary.ts"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/lib/localAgentRuntime.ts",
+    "src/lib/localWorkflowLibrary.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

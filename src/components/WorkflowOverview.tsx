@@ -6,6 +6,7 @@ import type { WorkflowDefinition } from "@/types/workflow";
 import type { AgentOSWorkflowUpdateChunk } from "@/types/agentos";
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { Activity, Clock, GitBranch } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
 const statusToColor: Record<string, string> = {
   running: "bg-emerald-500/10 text-emerald-200 border-emerald-500/40",
@@ -83,7 +84,13 @@ export function WorkflowOverview() {
       <header className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">Workflow overview</p>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Active automations</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Active automations</h3>
+            <HelpTooltip label="Explain workflow overview" side="bottom">
+              This panel shows workflow update snapshots captured from session streams. It is useful for quick task-level
+              visibility, while the Planning panel is better for checkpoint inspection and graph-run recovery.
+            </HelpTooltip>
+          </div>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs text-slate-600 dark:border-white/10 dark:text-slate-400">{workflows.length} tracked</div>
@@ -91,6 +98,7 @@ export function WorkflowOverview() {
             type="button"
             onClick={handleClearHistory}
             disabled={workflows.length === 0}
+            title="Remove all locally stored workflow telemetry snapshots from the workbench."
             className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs text-slate-600 transition disabled:opacity-40 dark:border-white/10 dark:text-slate-300"
           >
             Clear history
@@ -104,6 +112,7 @@ export function WorkflowOverview() {
             key={option}
             type="button"
             onClick={() => setStatusFilter(option)}
+            title={`Filter workflow snapshots by ${option.replace(/_/g, ' ')} status.`}
             className={clsx(
               "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em]",
               statusFilter === option
@@ -154,6 +163,7 @@ export function WorkflowOverview() {
                         setSelectedId(null);
                       }
                     }}
+                    title="Archive this workflow snapshot from the local workbench history."
                     className="rounded-full border border-slate-200 px-2 py-0.5 text-[9px] text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:text-slate-400 dark:hover:border-white/30"
                   >
                     Archive
@@ -211,6 +221,7 @@ export function WorkflowOverview() {
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
+                title="Close the workflow detail drawer."
                 className="rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-400 dark:hover:border-white/30"
               >
                 Close

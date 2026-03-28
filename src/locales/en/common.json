@@ -95,7 +95,7 @@
     },
     "footer": {
       "localNotice": "Backend API connection required",
-      "localNoticeDetails": "Requests are sent to your backend at /api/agentos/stream. Ensure backend is running with AGENTOS_ENABLED=true.\n\n⚠️ AGENCY MODE: Currently sends to one GMI per request. For true multi-GMI parallel coordination, workflows must be started via /workflows/start endpoint (not yet wired to this UI).\n\nUI state (sessions, personas, agencies) is stored locally in IndexedDB for offline viewing."
+      "localNoticeDetails": "Requests are sent to your backend at /api/agentos/stream. Ensure the backend is running and reachable.\n\n⚠️ AGENCY MODE: The workbench still uses legacy agency/workflow endpoints. Multi-seat demos go through /api/agentos/agency/workflow/start and related stream routes, not the new unified graph runtime yet.\n\nUI state (sessions, personas, agencies) is stored locally in IndexedDB for offline viewing."
     }
   },
   "artifactViewer": {

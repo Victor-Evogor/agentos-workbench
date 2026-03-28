@@ -17,7 +17,7 @@ type ButtonSize = 'sm' | 'md' | 'xs' | 'lg';
  * Accessible Button Props
  * Extends native button attributes with variant and size options.
  */
-type ButtonProps = React.PropsWithChildren<{
+type ButtonProps = React.PropsWithChildren<React.ButtonHTMLAttributes<HTMLButtonElement> & {
 	/** Additional CSS classes */
 	className?: string;
 	/** Visual variant */
@@ -108,4 +108,3 @@ export function Button({
 		</button>
 	);
 }
-

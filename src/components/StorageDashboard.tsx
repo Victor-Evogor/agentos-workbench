@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Database, Download, Upload, Trash2, RefreshCw, Eye, EyeOff, Info, CheckCircle2, AlertCircle, Zap, HardDrive } from 'lucide-react';
 import { idbStorage } from '../utils/idbStorage';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 interface IndexedDbInfo {
   name: string;
@@ -288,13 +289,20 @@ export function StorageDashboard() {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/60">
       <header className="mb-4 flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-2">
+          <div>
           <p className="text-[10px] uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">Storage Dashboard</p>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Database Management</h3>
+          </div>
+          <HelpTooltip label="Explain storage dashboard" side="bottom">
+            Inspect the local browser database, browse object stores, preview records, and export or restore local
+            state when debugging workbench persistence.
+          </HelpTooltip>
         </div>
         <button
           type="button"
           onClick={loadDbInfo}
+          title="Reload IndexedDB metadata and refresh the object store list."
           className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300"
         >
           <RefreshCw className="mr-1 inline h-3 w-3" />
@@ -314,6 +322,7 @@ export function StorageDashboard() {
               <button
                 type="button"
                 onClick={() => setShowInsights(false)}
+                title="Hide adapter guidance and recommendations for this storage backend."
                 className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400"
               >
                 Hide
@@ -394,6 +403,7 @@ export function StorageDashboard() {
           <button
             type="button"
             onClick={() => setShowInsights(true)}
+            title="Show adapter capabilities, limitations, and recommendations again."
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300"
           >
             <Info className="mr-1 inline h-3 w-3" />
@@ -432,6 +442,7 @@ export function StorageDashboard() {
             <select
               value={selectedStore || ''}
               onChange={(e) => setSelectedStore(e.target.value)}
+              title="Choose which IndexedDB object store to inspect below."
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100"
             >
               {dbInfo.stores.map((store) => (
@@ -478,6 +489,7 @@ export function StorageDashboard() {
                             <button
                               type="button"
                               onClick={() => toggleExpand(record.key)}
+                              title={isExpanded ? 'Collapse the full JSON preview for this record.' : 'Expand this record to inspect the full stored value.'}
                               className="text-slate-600 hover:text-sky-500 dark:text-slate-400"
                             >
                               {isExpanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -511,6 +523,7 @@ export function StorageDashboard() {
           <button
             type="button"
             onClick={handleExport}
+            title="Download all IndexedDB stores and records as a JSON backup."
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-200"
           >
             <Download className="h-3 w-3" />
@@ -519,6 +532,7 @@ export function StorageDashboard() {
           <button
             type="button"
             onClick={handleImport}
+            title="Import a previously exported JSON backup into matching object stores."
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-200"
           >
             <Upload className="h-3 w-3" />
@@ -527,6 +541,7 @@ export function StorageDashboard() {
           <button
             type="button"
             onClick={handleClear}
+            title="Delete all persisted workbench browser data after confirmation."
             className="inline-flex items-center gap-2 rounded-full border border-rose-300 bg-white px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 dark:border-rose-500/40 dark:text-rose-300"
           >
             <Trash2 className="h-3 w-3" />
@@ -537,4 +552,3 @@ export function StorageDashboard() {
     </section>
   );
 }
-

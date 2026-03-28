@@ -1,20 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useMemoryStore } from '@/state/memoryStore';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/**
- * Shape of a single timeline entry as returned by the backend.
- */
-interface TimelineEntry {
-  timestamp: number;
-  operation: string;
-  category: string;
-  content: string;
-  metadata: Record<string, unknown>;
-}
+import { RefreshCw } from 'lucide-react';
+import {
+  deriveMemorySurfaceTone,
+  describeMemoryLoadedAt,
+  describeMemoryLoadedAtAriaLabel,
+  describeMemoryLoadedAtTitle,
+  useMemoryStore,
+} from '@/state/memoryStore';
+import { DataSourceBadge } from './DataSourceBadge';
+import { HelpTooltip } from './ui/HelpTooltip';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -39,13 +33,13 @@ const ALL_CATEGORIES = ['episodic', 'semantic', 'procedural', 'working'] as cons
  */
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() - ts);
-  const sec  = Math.floor(diff / 1000);
-  if (sec < 60)   return `${sec}s ago`;
-  const min  = Math.floor(sec / 60);
-  if (min < 60)   return `${min} min ago`;
-  const hr   = Math.floor(min / 60);
-  if (hr  < 24)   return `${hr}h ago`;
-  const day  = Math.floor(hr / 24);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
   return `${day} day${day !== 1 ? 's' : ''} ago`;
 }
 
@@ -56,12 +50,18 @@ function relativeTime(ts: number): string {
  */
 function opBadgeClass(op: string): string {
   switch (op) {
-    case 'WRITE':       return 'bg-green-100  text-green-800  dark:bg-green-900/40  dark:text-green-300';
-    case 'RETRIEVE':    return 'bg-blue-100   text-blue-800   dark:bg-blue-900/40   dark:text-blue-300';
-    case 'CONSOLIDATE': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300';
-    case 'SUMMARIZE':   return 'bg-amber-100  text-amber-800  dark:bg-amber-900/40  dark:text-amber-300';
-    case 'DELETE':      return 'bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300';
-    default:            return 'bg-gray-100   text-gray-700   dark:bg-gray-800      dark:text-gray-300';
+    case 'WRITE':
+      return 'bg-green-100  text-green-800  dark:bg-green-900/40  dark:text-green-300';
+    case 'RETRIEVE':
+      return 'bg-blue-100   text-blue-800   dark:bg-blue-900/40   dark:text-blue-300';
+    case 'CONSOLIDATE':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300';
+    case 'SUMMARIZE':
+      return 'bg-amber-100  text-amber-800  dark:bg-amber-900/40  dark:text-amber-300';
+    case 'DELETE':
+      return 'bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300';
+    default:
+      return 'bg-gray-100   text-gray-700   dark:bg-gray-800      dark:text-gray-300';
   }
 }
 
@@ -80,7 +80,8 @@ function opBadgeClass(op: string): string {
  * Data is fetched from the backend on mount via {@link useMemoryStore}.
  */
 export function MemoryTimeline() {
-  const { timeline, fetchTimeline } = useMemoryStore();
+  const { timeline, timelineMode, timelineLoading, timelineLoadedAt, fetchTimeline } =
+    useMemoryStore();
 
   /** Active operation type filters — all enabled by default. */
   const [opFilters, setOpFilters] = useState<Set<string>>(new Set(ALL_OPERATIONS));
@@ -103,15 +104,70 @@ export function MemoryTimeline() {
   };
 
   /** Filtered and sorted (newest-first) timeline entries. */
-  const visible = useMemo<TimelineEntry[]>(() => {
-    return (timeline as TimelineEntry[])
+  const visible = useMemo(() => {
+    return timeline
       .filter((e) => opFilters.has(e.operation))
       .filter((e) => !categoryFilter || e.category === categoryFilter)
       .sort((a, b) => b.timestamp - a.timestamp);
   }, [timeline, opFilters, categoryFilter]);
 
+  const tone = deriveMemorySurfaceTone([timelineMode]);
+  const toneLabel =
+    tone === 'runtime'
+      ? 'Runtime Timeline'
+      : tone === 'mixed'
+        ? 'Mixed Timeline'
+        : tone === 'demo'
+          ? 'Demo Timeline'
+          : 'Timeline Checking';
+  const refreshTimeline = () => {
+    void fetchTimeline(undefined, { force: true });
+  };
+
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <DataSourceBadge
+          tone={tone}
+          label={toneLabel}
+          accessibleLabel={`Memory timeline data source: ${toneLabel}`}
+        />
+        <span
+          className="text-[10px] theme-text-secondary"
+          title={describeMemoryLoadedAtTitle(timelineLoadedAt)}
+          role="status"
+          aria-live="polite"
+          aria-label={describeMemoryLoadedAtAriaLabel(timelineLoadedAt)}
+        >
+          {describeMemoryLoadedAt(timelineLoadedAt)}
+        </span>
+        <HelpTooltip label="Explain memory timeline" side="bottom">
+          Follow memory operations over time, filter by operation type, and isolate specific tiers
+          to understand how memories were written, retrieved, summarized, or deleted.
+        </HelpTooltip>
+        <button
+          type="button"
+          onClick={refreshTimeline}
+          disabled={timelineLoading}
+          aria-busy={timelineLoading}
+          aria-label={timelineLoading ? 'Refreshing memory timeline' : 'Refresh memory timeline'}
+          title="Refresh memory timeline events from the backend."
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border theme-border bg-[color:var(--color-background-secondary)] px-2.5 py-1 text-[10px] theme-text-secondary transition hover:opacity-95 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <RefreshCw
+            size={10}
+            className={timelineLoading ? 'animate-spin' : ''}
+            aria-hidden="true"
+          />
+          {timelineLoading ? 'Refreshing…' : 'Refresh'}
+        </button>
+        <span className="text-[10px] theme-text-secondary" role="status" aria-live="polite">
+          {timelineLoading
+            ? 'Refreshing…'
+            : `${visible.length} event${visible.length === 1 ? '' : 's'}`}
+        </span>
+      </div>
+
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border theme-border theme-bg-secondary p-2">
         {/* Operation type checkboxes */}
@@ -122,6 +178,7 @@ export function MemoryTimeline() {
                 type="checkbox"
                 checked={opFilters.has(op)}
                 onChange={() => toggleOp(op)}
+                title={`${opFilters.has(op) ? 'Hide' : 'Show'} ${op} events in the timeline.`}
                 className="accent-accent h-3 w-3"
               />
               <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${opBadgeClass(op)}`}>
@@ -135,18 +192,23 @@ export function MemoryTimeline() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
+          title="Filter the timeline to a specific memory category."
           className="ml-auto text-xs rounded border theme-border theme-bg-primary theme-text-primary px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">All categories</option>
           {ALL_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+            <option key={c} value={c}>
+              {c.charAt(0).toUpperCase() + c.slice(1)}
+            </option>
           ))}
         </select>
       </div>
 
       {/* Event feed */}
       {visible.length === 0 ? (
-        <p className="text-xs theme-text-secondary text-center py-6">No events match the current filters.</p>
+        <p className="text-xs theme-text-secondary text-center py-6">
+          No events match the current filters.
+        </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {visible.map((entry, idx) => (
@@ -161,7 +223,9 @@ export function MemoryTimeline() {
                 </span>
 
                 {/* Operation badge */}
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${opBadgeClass(entry.operation)}`}>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${opBadgeClass(entry.operation)}`}
+                >
                   {entry.operation}
                 </span>
 

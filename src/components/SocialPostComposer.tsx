@@ -49,6 +49,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { resolveWorkbenchApiBaseUrl } from '@/lib/agentosClient';
+import { DataSourceBadge } from '@/components/DataSourceBadge';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import {
   useSocialStore,
@@ -79,7 +80,10 @@ const STATUS_BADGE: Record<PostRecord['status'], { label: string; cls: string }>
   draft: { label: 'draft', cls: 'border-slate-500/30 bg-slate-500/10 text-slate-400' },
   scheduled: { label: 'scheduled', cls: 'border-amber-500/30 bg-amber-500/10 text-amber-400' },
   publishing: { label: 'publishing', cls: 'border-sky-500/30 bg-sky-500/10 text-sky-400' },
-  published: { label: 'published', cls: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300' },
+  published: {
+    label: 'published',
+    cls: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300',
+  },
   failed: { label: 'failed', cls: 'border-rose-500/30 bg-rose-500/10 text-rose-400' },
 };
 
@@ -108,9 +112,7 @@ function PlatformCheckbox({ platformId, selected, onToggle }: PlatformCheckboxPr
     <label
       className={[
         'flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors hover:bg-white/5',
-        selected
-          ? 'border-sky-500/60 bg-sky-500/10'
-          : 'theme-border theme-bg-primary',
+        selected ? 'border-sky-500/60 bg-sky-500/10' : 'theme-border theme-bg-primary',
       ].join(' ')}
     >
       <input
@@ -119,7 +121,13 @@ function PlatformCheckbox({ platformId, selected, onToggle }: PlatformCheckboxPr
         onChange={onToggle}
         className="shrink-0 accent-sky-500"
       />
-      <span className={selected ? 'text-[10px] font-semibold text-sky-400' : 'text-[10px] font-semibold theme-text-primary'}>
+      <span
+        className={
+          selected
+            ? 'text-[10px] font-semibold text-sky-400'
+            : 'text-[10px] font-semibold theme-text-primary'
+        }
+      >
         {meta.label}
       </span>
       <span className="ml-auto text-[9px] theme-text-muted">{meta.charLimit.toLocaleString()}</span>
@@ -160,7 +168,10 @@ function PlatformPreviewCard({ platformId, originalText }: PlatformPreviewCardPr
       {/* Character bar */}
       <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
         <div
-          className={['h-full rounded-full transition-all', overLimit ? 'bg-rose-500' : 'bg-sky-500'].join(' ')}
+          className={[
+            'h-full rounded-full transition-all',
+            overLimit ? 'bg-rose-500' : 'bg-sky-500',
+          ].join(' ')}
           style={{ width: `${charPct}%` }}
         />
       </div>
@@ -173,7 +184,10 @@ function PlatformPreviewCard({ platformId, originalText }: PlatformPreviewCardPr
       <p className="text-[9px] theme-text-muted">
         Hashtags: <span className="font-semibold theme-text-primary">{meta.hashtagStyle}</span>
         {' · '}
-        Media: <span className="font-semibold theme-text-primary">{meta.supportedMediaTypes.join(', ')}</span>
+        Media:{' '}
+        <span className="font-semibold theme-text-primary">
+          {meta.supportedMediaTypes.join(', ')}
+        </span>
       </p>
     </div>
   );
@@ -221,9 +235,16 @@ function MediaUploader({ items, onAdd, onRemove }: MediaUploaderProps) {
             ? 'border-sky-500/60 bg-sky-500/5'
             : 'theme-border hover:border-sky-500/40 hover:bg-white/[0.02]',
         ].join(' ')}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          handleFiles(e.dataTransfer.files);
+        }}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
       >
@@ -251,11 +272,7 @@ function MediaUploader({ items, onAdd, onRemove }: MediaUploaderProps) {
               className="group relative rounded-lg border theme-border theme-bg-primary px-2 py-1.5 flex items-center gap-2"
             >
               {item.type === 'image' ? (
-                <img
-                  src={item.url}
-                  alt={item.name}
-                  className="h-8 w-8 rounded object-cover"
-                />
+                <img src={item.url} alt={item.name} className="h-8 w-8 rounded object-cover" />
               ) : (
                 <div className="flex h-8 w-8 items-center justify-center rounded bg-sky-500/10">
                   <Globe size={12} className="text-sky-400" />
@@ -290,7 +307,9 @@ function PostHistoryRow({ post }: { post: PostRecord }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs theme-text-primary">{post.text}</p>
         <div className="mt-0.5 flex flex-wrap gap-2 text-[10px] theme-text-muted">
-          <span>{post.platforms.length} platform{post.platforms.length !== 1 ? 's' : ''}</span>
+          <span>
+            {post.platforms.length} platform{post.platforms.length !== 1 ? 's' : ''}
+          </span>
           {post.scheduledAt && (
             <span>Scheduled: {new Date(post.scheduledAt).toLocaleString()}</span>
           )}
@@ -359,6 +378,7 @@ export function SocialPostComposer() {
   const mediaItems = useSocialStore((s) => s.mediaItems);
   const posts = useSocialStore((s) => s.posts);
   const scheduledAt = useSocialStore((s) => s.scheduledAt);
+  const dataMode = useSocialStore((s) => s.dataMode);
 
   const setDraftText = useSocialStore((s) => s.setDraftText);
   const togglePlatform = useSocialStore((s) => s.togglePlatform);
@@ -367,22 +387,31 @@ export function SocialPostComposer() {
   const addPost = useSocialStore((s) => s.addPost);
   const setPosts = useSocialStore((s) => s.setPosts);
   const setScheduledAt = useSocialStore((s) => s.setScheduledAt);
+  const setDataMode = useSocialStore((s) => s.setDataMode);
 
   // Load post history on mount
-  const loadPosts = useCallback(async (silent = false) => {
-    if (!silent) setLoadingPosts(true);
-    try {
-      const base = buildBaseUrl();
-      const res = await fetch(`${base}/api/social/posts`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { posts?: PostRecord[] };
-      setPosts(data.posts ?? []);
-    } catch {
-      // Backend may be unavailable; retain local history
-    } finally {
-      setLoadingPosts(false);
-    }
-  }, [setPosts]);
+  const loadPosts = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoadingPosts(true);
+      try {
+        const base = buildBaseUrl();
+        const res = await fetch(`${base}/api/social/posts`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as {
+          mode?: 'demo' | 'mixed' | 'runtime' | 'local';
+          posts?: PostRecord[];
+        };
+        setPosts(data.posts ?? []);
+        setDataMode(data.mode ?? 'demo');
+      } catch {
+        // Backend may be unavailable; retain local history
+        setDataMode('demo');
+      } finally {
+        setLoadingPosts(false);
+      }
+    },
+    [setDataMode, setPosts]
+  );
 
   useEffect(() => {
     void loadPosts();
@@ -434,7 +463,12 @@ export function SocialPostComposer() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { postId?: string; link?: string };
+      const data = (await res.json()) as {
+        mode?: 'demo' | 'mixed' | 'runtime' | 'local';
+        postId?: string;
+        link?: string;
+      };
+      setDataMode(data.mode ?? 'demo');
       // Update local record with published state
       const updatedPost: Partial<PostRecord> = scheduled
         ? { status: 'scheduled' }
@@ -444,13 +478,16 @@ export function SocialPostComposer() {
           .map((p) => (p.id === postId ? { ...p, ...updatedPost } : p))
           .concat(posts.find((p) => p.id === postId) ? [] : [{ ...newPost, ...updatedPost }])
       );
-      setSuccess(scheduled ? 'Post scheduled.' : 'Post published successfully.');
+      setSuccess(
+        scheduled
+          ? 'Post scheduled in the demo social queue.'
+          : 'Post recorded as published in the demo social queue.'
+      );
       setDraftText('');
     } catch (err) {
+      setDataMode('demo');
       setError(err instanceof Error ? err.message : 'Publish failed.');
-      setPosts(
-        posts.map((p) => (p.id === postId ? { ...p, status: 'failed' } : p))
-      );
+      setPosts(posts.map((p) => (p.id === postId ? { ...p, status: 'failed' } : p)));
     } finally {
       setSubmitting(false);
     }
@@ -471,6 +508,19 @@ export function SocialPostComposer() {
             <p className="text-[10px] uppercase tracking-[0.35em] theme-text-muted">Social</p>
             <h3 className="text-sm font-semibold theme-text-primary">Post Composer</h3>
           </div>
+          <DataSourceBadge
+            tone={dataMode}
+            label={
+              dataMode === 'runtime'
+                ? 'Runtime Publishing'
+                : dataMode === 'mixed'
+                  ? 'Mixed Publishing'
+                  : dataMode === 'local'
+                    ? 'Local Drafts'
+                    : 'Demo Publishing'
+            }
+            className="shrink-0"
+          />
           <HelpTooltip label="Explain social post composer" side="bottom">
             Compose a post, select target platforms, preview per-platform adaptations (character
             limits, hashtag grouping), attach media, and publish immediately or schedule. The
@@ -562,14 +612,8 @@ export function SocialPostComposer() {
 
           {/* Media uploader */}
           <div>
-            <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">
-              Media
-            </p>
-            <MediaUploader
-              items={mediaItems}
-              onAdd={addMedia}
-              onRemove={removeMedia}
-            />
+            <p className="mb-1.5 text-[10px] uppercase tracking-[0.35em] theme-text-muted">Media</p>
+            <MediaUploader items={mediaItems} onAdd={addMedia} onRemove={removeMedia} />
           </div>
 
           {/* Schedule toggle */}
@@ -581,7 +625,9 @@ export function SocialPostComposer() {
                 onChange={(e) => setScheduleMode(e.target.checked)}
                 className="shrink-0 accent-sky-500"
               />
-              <span className="text-[10px] font-semibold theme-text-primary">Schedule for later</span>
+              <span className="text-[10px] font-semibold theme-text-primary">
+                Schedule for later
+              </span>
             </label>
             {scheduleMode && (
               <input
@@ -619,7 +665,9 @@ export function SocialPostComposer() {
               <button
                 type="button"
                 onClick={() => void handlePublish(true)}
-                disabled={submitting || !draftText.trim() || selectedPlatforms.size === 0 || !scheduledAt}
+                disabled={
+                  submitting || !draftText.trim() || selectedPlatforms.size === 0 || !scheduledAt
+                }
                 className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-[10px] font-semibold text-amber-400 transition hover:bg-amber-500/20 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
               >
                 {submitting ? (
@@ -636,11 +684,7 @@ export function SocialPostComposer() {
                 disabled={submitting || !draftText.trim() || selectedPlatforms.size === 0}
                 className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-4 py-1.5 text-[10px] font-semibold text-sky-400 transition hover:bg-sky-500/20 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               >
-                {submitting ? (
-                  <Loader2 size={10} className="animate-spin" />
-                ) : (
-                  <Send size={10} />
-                )}
+                {submitting ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
                 {submitting
                   ? 'Posting…'
                   : `Post Now to ${selectedPlatforms.size} platform${selectedPlatforms.size !== 1 ? 's' : ''}`}
@@ -666,11 +710,7 @@ export function SocialPostComposer() {
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {selectedList.map((pid) => (
-                <PlatformPreviewCard
-                  key={pid}
-                  platformId={pid}
-                  originalText={draftText}
-                />
+                <PlatformPreviewCard key={pid} platformId={pid} originalText={draftText} />
               ))}
             </div>
           )}
@@ -687,13 +727,12 @@ export function SocialPostComposer() {
               <Clock size={18} className="theme-text-muted" />
               <p className="text-xs theme-text-secondary">No posts yet.</p>
               <p className="text-[10px] theme-text-muted">
-                Posts you compose and schedule will appear here.
+                Posts you compose and schedule will appear here. In this workbench route they stay
+                on the demo queue.
               </p>
             </div>
           ) : (
-            posts.map((post) => (
-              <PostHistoryRow key={post.id} post={post} />
-            ))
+            posts.map((post) => <PostHistoryRow key={post.id} post={post} />)
           )}
         </div>
       )}

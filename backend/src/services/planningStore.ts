@@ -26,6 +26,15 @@ export interface PlanStepRecord {
   durationMs?: number;
 }
 
+export interface PlanCheckpointRecord {
+  checkpointId: string;
+  timestamp: string;
+  reason: string;
+  status: PlanStatus;
+  currentStepIndex: number;
+  steps: PlanStepRecord[];
+}
+
 export interface PlanRecord {
   planId: string;
   goal: string;
@@ -36,6 +45,11 @@ export interface PlanRecord {
   updatedAt?: string;
   status: PlanStatus;
   currentStepIndex: number;
+  source?: 'manual' | 'runtime';
+  readOnly?: boolean;
+  conversationId?: string;
+  workflowId?: string;
+  checkpoints?: PlanCheckpointRecord[];
 }
 
 export interface CreatePlanInput {
@@ -50,6 +64,15 @@ export interface CreatePlanInput {
   }>;
 }
 
+export interface RuntimePlanSyncInput {
+  planId: string;
+  goal: string;
+  status: PlanStatus;
+  steps: PlanStepRecord[];
+  conversationId?: string;
+  workflowId?: string;
+}
+
 type PersistedPlanningState = {
   version: number;
   planCounter: number;
@@ -58,6 +81,7 @@ type PersistedPlanningState = {
 };
 
 const STORE_VERSION = 1;
+const MAX_CHECKPOINTS_PER_PLAN = 25;
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -118,6 +142,19 @@ function normalizeGoal(goal?: string): string {
   return value;
 }
 
+function summarizeSteps(steps: PlanStepRecord[]): { estimatedTokens: number; confidenceScore: number } {
+  const estimatedTokens = steps.reduce((sum, step) => sum + (step.estimatedTokens ?? 0), 0);
+  const confidenceScore =
+    steps.length > 0
+      ? Number(
+          (
+            steps.reduce((sum, step) => sum + (step.confidence ?? 0.75), 0) / steps.length
+          ).toFixed(2)
+        )
+      : 0.75;
+  return { estimatedTokens, confidenceScore };
+}
+
 export class PlanningStore {
   private readonly storePath: string;
   private plans: PlanRecord[];
@@ -170,6 +207,11 @@ export class PlanningStore {
     return deepClone(this.plans);
   }
 
+  getPlan(planId: string): PlanRecord | null {
+    const plan = this.findPlan(planId);
+    return plan ? deepClone(plan) : null;
+  }
+
   createPlan(input: CreatePlanInput): PlanRecord {
     const nowIso = new Date().toISOString();
     const goal = normalizeGoal(input.goal);
@@ -177,15 +219,7 @@ export class PlanningStore {
     const steps = this.buildSteps(goal, input.steps);
     const firstStep = steps.findIndex((step) => step.status === 'in_progress');
 
-    const confidenceScore =
-      steps.length > 0
-        ? Number(
-            (
-              steps.reduce((sum, step) => sum + (step.confidence ?? 0.75), 0) / steps.length
-            ).toFixed(2)
-          )
-        : 0.75;
-    const estimatedTokens = steps.reduce((sum, step) => sum + (step.estimatedTokens ?? 600), 0);
+    const { confidenceScore, estimatedTokens } = summarizeSteps(steps);
 
     const plan: PlanRecord = {
       planId,
@@ -197,8 +231,12 @@ export class PlanningStore {
       updatedAt: nowIso,
       status: steps.length > 0 ? 'executing' : 'draft',
       currentStepIndex: firstStep >= 0 ? firstStep : 0,
+      source: 'manual',
+      readOnly: false,
+      checkpoints: [],
     };
 
+    this.recordCheckpoint(plan, 'created');
     this.plans.unshift(plan);
     this.persistState();
     return deepClone(plan);
@@ -209,9 +247,13 @@ export class PlanningStore {
     if (!plan) {
       return null;
     }
+    if (plan.readOnly) {
+      return deepClone(plan);
+    }
     if (plan.status === 'executing') {
       plan.status = 'paused';
       plan.updatedAt = new Date().toISOString();
+      this.recordCheckpoint(plan, 'paused');
       this.persistState();
     }
     return deepClone(plan);
@@ -221,6 +263,9 @@ export class PlanningStore {
     const plan = this.findPlan(planId);
     if (!plan) {
       return null;
+    }
+    if (plan.readOnly) {
+      return deepClone(plan);
     }
     if (plan.status === 'paused' || plan.status === 'draft') {
       plan.status = 'executing';
@@ -232,6 +277,7 @@ export class PlanningStore {
         }
       }
       plan.updatedAt = new Date().toISOString();
+      this.recordCheckpoint(plan, 'resumed');
       this.persistState();
     }
     return deepClone(plan);
@@ -241,6 +287,9 @@ export class PlanningStore {
     const plan = this.findPlan(planId);
     if (!plan || plan.status !== 'executing') {
       return plan ? deepClone(plan) : null;
+    }
+    if (plan.readOnly) {
+      return deepClone(plan);
     }
 
     let currentIndex = plan.steps.findIndex((step) => step.status === 'in_progress');
@@ -253,6 +302,7 @@ export class PlanningStore {
     if (currentIndex < 0) {
       plan.status = 'completed';
       plan.updatedAt = new Date().toISOString();
+      this.recordCheckpoint(plan, 'completed');
       this.persistState();
       return deepClone(plan);
     }
@@ -273,6 +323,7 @@ export class PlanningStore {
       plan.status = 'completed';
     }
     plan.updatedAt = new Date().toISOString();
+    this.recordCheckpoint(plan, plan.status === 'completed' ? 'completed' : 'advanced');
     this.persistState();
     return deepClone(plan);
   }
@@ -281,6 +332,9 @@ export class PlanningStore {
     const existing = this.findPlan(planId);
     if (!existing) {
       return null;
+    }
+    if (existing.readOnly) {
+      return deepClone(existing);
     }
     const steps = existing.steps.map((step) => ({
       description: step.description,
@@ -294,6 +348,150 @@ export class PlanningStore {
       goal: `${existing.goal} (rerun)`,
       steps,
     });
+  }
+
+  restoreCheckpoint(planId: string, checkpointId: string): PlanRecord | null {
+    const plan = this.findPlan(planId);
+    if (!plan || plan.readOnly) {
+      return plan ? deepClone(plan) : null;
+    }
+
+    const checkpoint = (plan.checkpoints ?? []).find((item) => item.checkpointId === checkpointId);
+    if (!checkpoint) {
+      return null;
+    }
+
+    plan.steps = deepClone(checkpoint.steps);
+    const { confidenceScore, estimatedTokens } = summarizeSteps(plan.steps);
+    plan.confidenceScore = confidenceScore;
+    plan.estimatedTokens = estimatedTokens;
+    plan.status = checkpoint.status;
+    plan.currentStepIndex = Math.max(
+      0,
+      Math.min(checkpoint.currentStepIndex, Math.max(plan.steps.length - 1, 0))
+    );
+    plan.updatedAt = new Date().toISOString();
+    this.recordCheckpoint(plan, `restored_from_${checkpoint.reason}`);
+    this.persistState();
+    return deepClone(plan);
+  }
+
+  forkCheckpoint(planId: string, checkpointId: string): PlanRecord | null {
+    const sourcePlan = this.findPlan(planId);
+    if (!sourcePlan) {
+      return null;
+    }
+
+    const checkpoint = (sourcePlan.checkpoints ?? []).find((item) => item.checkpointId === checkpointId);
+    if (!checkpoint) {
+      return null;
+    }
+
+    const nowIso = new Date().toISOString();
+    const planIdValue = `plan-${String(++this.planCounter).padStart(4, '0')}`;
+    const steps = deepClone(checkpoint.steps).map((step) => ({
+      ...step,
+      status: step.status === 'failed' || step.status === 'in_progress' ? 'pending' : step.status,
+      error: step.status === 'failed' ? undefined : step.error,
+    })) as PlanStepRecord[];
+    const nextRunnableIndex = steps.findIndex((step) => step.status === 'pending');
+    if (nextRunnableIndex >= 0) {
+      steps[nextRunnableIndex].status = 'in_progress';
+    }
+    const { confidenceScore, estimatedTokens } = summarizeSteps(steps);
+    const plan: PlanRecord = {
+      planId: planIdValue,
+      goal: `${sourcePlan.goal} (checkpoint fork)`,
+      steps,
+      estimatedTokens,
+      confidenceScore,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      status: nextRunnableIndex >= 0 ? 'executing' : checkpoint.status,
+      currentStepIndex:
+        nextRunnableIndex >= 0
+          ? nextRunnableIndex
+          : Math.max(0, Math.min(checkpoint.currentStepIndex, Math.max(steps.length - 1, 0))),
+      source: 'manual',
+      readOnly: false,
+      conversationId: sourcePlan.conversationId,
+      workflowId: sourcePlan.workflowId,
+      checkpoints: [],
+    };
+    this.recordCheckpoint(plan, `forked_from_${sourcePlan.planId}`);
+    this.plans.unshift(plan);
+    this.persistState();
+    return deepClone(plan);
+  }
+
+  syncRuntimePlan(input: RuntimePlanSyncInput): PlanRecord {
+    const nowIso = new Date().toISOString();
+    const { estimatedTokens, confidenceScore } = summarizeSteps(input.steps);
+    const currentStepIndex = Math.max(
+      input.steps.findIndex((step) => step.status === 'in_progress'),
+      0
+    );
+    const existing = this.findPlan(input.planId);
+
+    if (existing) {
+      const previousSignature = JSON.stringify({
+        status: existing.status,
+        currentStepIndex: existing.currentStepIndex,
+        steps: existing.steps.map((step) => ({
+          stepId: step.stepId,
+          status: step.status,
+          output: step.output ?? null,
+          error: step.error ?? null,
+        })),
+      });
+      existing.goal = input.goal;
+      existing.steps = deepClone(input.steps);
+      existing.estimatedTokens = estimatedTokens;
+      existing.confidenceScore = confidenceScore;
+      existing.updatedAt = nowIso;
+      existing.status = input.status;
+      existing.currentStepIndex = currentStepIndex;
+      existing.source = 'runtime';
+      existing.readOnly = true;
+      existing.conversationId = input.conversationId;
+      existing.workflowId = input.workflowId;
+      const nextSignature = JSON.stringify({
+        status: existing.status,
+        currentStepIndex: existing.currentStepIndex,
+        steps: existing.steps.map((step) => ({
+          stepId: step.stepId,
+          status: step.status,
+          output: step.output ?? null,
+          error: step.error ?? null,
+        })),
+      });
+      if (previousSignature !== nextSignature) {
+        this.recordCheckpoint(existing, 'runtime_sync');
+      }
+      this.persistState();
+      return deepClone(existing);
+    }
+
+    const plan: PlanRecord = {
+      planId: input.planId,
+      goal: input.goal,
+      steps: deepClone(input.steps),
+      estimatedTokens,
+      confidenceScore,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      status: input.status,
+      currentStepIndex,
+      source: 'runtime',
+      readOnly: true,
+      conversationId: input.conversationId,
+      workflowId: input.workflowId,
+      checkpoints: [],
+    };
+    this.recordCheckpoint(plan, 'runtime_sync');
+    this.plans.unshift(plan);
+    this.persistState();
+    return deepClone(plan);
   }
 
   private buildSteps(
@@ -341,6 +539,19 @@ export class PlanningStore {
 
   private findPlan(planId: string): PlanRecord | undefined {
     return this.plans.find((plan) => plan.planId === planId);
+  }
+
+  private recordCheckpoint(plan: PlanRecord, reason: string): void {
+    const checkpoint: PlanCheckpointRecord = {
+      checkpointId: `${plan.planId}-cp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date().toISOString(),
+      reason,
+      status: plan.status,
+      currentStepIndex: plan.currentStepIndex,
+      steps: deepClone(plan.steps),
+    };
+    const previous = Array.isArray(plan.checkpoints) ? plan.checkpoints : [];
+    plan.checkpoints = [checkpoint, ...previous].slice(0, MAX_CHECKPOINTS_PER_PLAN);
   }
 
   private loadState(): { planCounter: number; stepCounter: number; plans: PlanRecord[] } | null {

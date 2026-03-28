@@ -43,6 +43,20 @@ type SseClient = {
   reply: FastifyReply;
 };
 
+type WorkbenchEventSourceMode = 'runtime' | 'demo' | 'mixed' | 'local';
+
+function withEventSourceMetadata<T extends Record<string, unknown>>(
+  data: T,
+  sourceMode: WorkbenchEventSourceMode,
+  synthetic = false
+): T & { sourceMode: WorkbenchEventSourceMode; synthetic?: boolean } {
+  return {
+    ...data,
+    sourceMode,
+    ...(synthetic ? { synthetic: true } : {}),
+  };
+}
+
 /**
  * Shared broadcaster that any route or service can import to push events to
  * all connected SSE clients.
@@ -102,34 +116,62 @@ function startDemoHeartbeat(): void {
     const roll = Math.random();
 
     if (roll < 0.25) {
-      eventBroadcaster.broadcast('voice:transcript', {
-        callId: 'call-demo',
-        speaker: roll < 0.125 ? 'Agent' : 'Caller',
-        text: 'Live transcription stream…',
-        timestamp: new Date().toISOString(),
-      });
+      eventBroadcaster.broadcast(
+        'voice:transcript',
+        withEventSourceMetadata(
+          {
+            callId: 'call-demo',
+            speaker: roll < 0.125 ? 'Agent' : 'Caller',
+            text: 'Live transcription stream…',
+            timestamp: new Date().toISOString(),
+          },
+          'demo',
+          true
+        )
+      );
     } else if (roll < 0.45) {
       const channel = DEMO_CHANNELS[Math.floor(Math.random() * DEMO_CHANNELS.length)];
-      eventBroadcaster.broadcast('channel:message', {
-        channel,
-        from: 'demo-user',
-        text: `Incoming ${channel} message at ${new Date().toLocaleTimeString()}`,
-        timestamp: new Date().toISOString(),
-      });
+      eventBroadcaster.broadcast(
+        'channel:message',
+        withEventSourceMetadata(
+          {
+            channel,
+            from: 'demo-user',
+            text: `Incoming ${channel} message at ${new Date().toLocaleTimeString()}`,
+            timestamp: new Date().toISOString(),
+          },
+          'demo',
+          true
+        )
+      );
     } else if (roll < 0.55) {
       const agent = DEMO_AGENTS[Math.floor(Math.random() * DEMO_AGENTS.length)];
-      eventBroadcaster.broadcast('agency:agent-start', {
-        agentId: agent,
-        input: 'Working on task…',
-        timestamp: new Date().toISOString(),
-      });
+      eventBroadcaster.broadcast(
+        'agency:agent-start',
+        withEventSourceMetadata(
+          {
+            agentId: agent,
+            input: 'Working on task…',
+            timestamp: new Date().toISOString(),
+          },
+          'demo',
+          true
+        )
+      );
     } else if (roll < 0.65) {
       const agent = DEMO_AGENTS[Math.floor(Math.random() * DEMO_AGENTS.length)];
-      eventBroadcaster.broadcast('agency:agent-end', {
-        agentId: agent,
-        output: 'Task complete.',
-        timestamp: new Date().toISOString(),
-      });
+      eventBroadcaster.broadcast(
+        'agency:agent-end',
+        withEventSourceMetadata(
+          {
+            agentId: agent,
+            output: 'Task complete.',
+            timestamp: new Date().toISOString(),
+          },
+          'demo',
+          true
+        )
+      );
     }
   }, 4_000);
 }
@@ -156,7 +198,16 @@ export default async function eventsRoutes(fastify: FastifyInstance): Promise<vo
 
     // Send initial connected event
     reply.raw.write(
-      `data: ${JSON.stringify({ event: '__connected__', data: { message: 'AgentOS event bus connected', ts: Date.now() } })}\n\n`
+      `data: ${JSON.stringify({
+        event: '__connected__',
+        data: withEventSourceMetadata(
+          {
+            message: 'AgentOS event bus connected',
+            ts: Date.now(),
+          },
+          'mixed'
+        ),
+      })}\n\n`
     );
 
     const removeClient = eventBroadcaster.addClient(clientId, reply);
@@ -191,23 +242,46 @@ export default async function eventsRoutes(fastify: FastifyInstance): Promise<vo
    * trigger frontend notifications.
    */
   fastify.post<{
-    Body: { event: string; data: unknown };
-  }>('/events/emit', {
-    schema: {
-      description: 'Broadcast a custom event to all connected SSE clients',
-      tags: ['Events'],
-      body: {
-        type: 'object',
-        required: ['event', 'data'],
-        properties: {
-          event: { type: 'string' },
-          data: { type: 'object', additionalProperties: true },
+    Body: {
+      event: string;
+      data: Record<string, unknown>;
+      sourceMode?: WorkbenchEventSourceMode;
+      synthetic?: boolean;
+    };
+  }>(
+    '/events/emit',
+    {
+      schema: {
+        description: 'Broadcast a custom event to all connected SSE clients',
+        tags: ['Events'],
+        body: {
+          type: 'object',
+          required: ['event', 'data'],
+          properties: {
+            event: { type: 'string' },
+            data: { type: 'object', additionalProperties: true },
+            sourceMode: { type: 'string' },
+            synthetic: { type: 'boolean' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              clients: { type: 'number' },
+              mode: { type: 'string' },
+            },
+            required: ['ok', 'clients', 'mode'],
+          },
         },
       },
     },
-  }, async (request, reply) => {
-    const { event, data } = request.body;
-    eventBroadcaster.broadcast(event, data);
-    return reply.send({ ok: true, clients: eventBroadcaster.clientCount });
-  });
+    async (request, reply) => {
+      const { event, data, sourceMode = 'runtime', synthetic = false } = request.body;
+      reply.header('X-AgentOS-Workbench-Mode', 'mixed');
+      eventBroadcaster.broadcast(event, withEventSourceMetadata(data, sourceMode, synthetic));
+      return reply.send({ ok: true, clients: eventBroadcaster.clientCount, mode: 'mixed' });
+    }
+  );
 }

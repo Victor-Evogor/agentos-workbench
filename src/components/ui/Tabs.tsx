@@ -35,8 +35,10 @@ export function TabsList({ children }: React.PropsWithChildren) {
 	return <div className="flex gap-2">{children}</div>;
 }
 
-type TabsTriggerProps = React.PropsWithChildren<{ value: string }>;
-export function TabsTrigger({ value, children }: TabsTriggerProps) {
+type TabsTriggerProps = React.PropsWithChildren<
+	React.ButtonHTMLAttributes<HTMLButtonElement> & { value: string }
+>;
+export function TabsTrigger({ value, children, onClick, ...rest }: TabsTriggerProps) {
 	const ctx = useContext(TabsContext);
 	if (!ctx) return null;
 	const active = ctx.active === value;
@@ -48,8 +50,14 @@ export function TabsTrigger({ value, children }: TabsTriggerProps) {
 					? 'theme-bg-accent theme-text-on-accent shadow-sm'
 					: 'border theme-border theme-bg-secondary theme-text-secondary hover:opacity-95 transition'
 			}`}
-			onClick={() => ctx.setActive(value)}
+			onClick={(event) => {
+				onClick?.(event);
+				if (!event.defaultPrevented) {
+					ctx.setActive(value);
+				}
+			}}
 			aria-pressed={active}
+			{...rest}
 		>
 			{children}
 		</button>
@@ -75,4 +83,3 @@ export const Tabs = Object.assign(TabsRoot, {
 	Trigger: TabsTrigger,
 	Content: TabsContent,
 }) as TabsComponent;
-

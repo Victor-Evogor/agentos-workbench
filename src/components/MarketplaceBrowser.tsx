@@ -23,6 +23,9 @@ import { Input } from './ui/Input';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Tabs } from './ui/Tabs';
+import { HelpTooltip } from './ui/HelpTooltip';
+import { DataSourceBadge } from './DataSourceBadge';
+import type { WorkbenchDataMode } from '@/lib/workbenchStatus';
 
 // Types matching the marketplace interface
 interface MarketplaceItem {
@@ -62,6 +65,36 @@ interface InstalledItem {
   status: string;
   installedAt: string;
   autoUpdate: boolean;
+  item?: MarketplaceItem;
+}
+
+interface MarketplaceListResponse {
+  mode?: WorkbenchDataMode;
+  items?: MarketplaceItem[];
+}
+
+interface InstalledItemsResponse {
+  mode?: WorkbenchDataMode;
+  items?: InstalledItem[];
+}
+
+interface InstallItemResponse {
+  mode?: WorkbenchDataMode;
+  success?: boolean;
+  installation?: InstalledItem;
+}
+
+function resolveWorkbenchDataMode(value: unknown, fallback: WorkbenchDataMode): WorkbenchDataMode {
+  return value === 'runtime' || value === 'mixed' || value === 'demo' || value === 'local'
+    ? value
+    : fallback;
+}
+
+function marketplaceBadgeLabel(dataMode: WorkbenchDataMode): string {
+  if (dataMode === 'runtime') return 'Runtime Marketplace';
+  if (dataMode === 'mixed') return 'Mixed Marketplace';
+  if (dataMode === 'local') return 'Local Marketplace Fallback';
+  return 'Demo Marketplace';
 }
 
 interface MarketplaceBrowserProps {
@@ -90,6 +123,7 @@ export function MarketplaceBrowser({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState('browse');
   const [selectedItem, setSelectedItem] = useState<MarketplaceItem | null>(null);
+  const [dataMode, setDataMode] = useState<WorkbenchDataMode>('demo');
 
   // Fetch marketplace items
   const fetchItems = useCallback(async () => {
@@ -97,16 +131,23 @@ export function MarketplaceBrowser({
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.append('query', searchQuery);
-      if (selectedType !== 'all') params.append('types', selectedType);
-      if (selectedCategory !== 'all') params.append('categories', selectedCategory);
+      if (selectedType !== 'all') params.append('type', selectedType);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
 
       const response = await fetch(`${apiEndpoint}/search?${params}`);
       if (response.ok) {
-        const data = await response.json();
-        setItems(data.items || []);
+        const data = (await response.json()) as MarketplaceListResponse | MarketplaceItem[];
+        if (Array.isArray(data)) {
+          setItems(data);
+          setDataMode('demo');
+        } else {
+          setItems(data.items || []);
+          setDataMode(resolveWorkbenchDataMode(data.mode, 'demo'));
+        }
       }
     } catch (error) {
       console.error('Failed to fetch marketplace items:', error);
+      setDataMode('local');
       // Use mock data for demo
       setItems(getMockItems());
     } finally {
@@ -119,8 +160,14 @@ export function MarketplaceBrowser({
     try {
       const response = await fetch(`${apiEndpoint}/installed`);
       if (response.ok) {
-        const data = await response.json();
-        setInstalledItems(data || []);
+        const data = (await response.json()) as InstalledItemsResponse | InstalledItem[];
+        if (Array.isArray(data)) {
+          setInstalledItems(data);
+          setDataMode('demo');
+        } else {
+          setInstalledItems(data.items || []);
+          setDataMode(resolveWorkbenchDataMode(data.mode, 'demo'));
+        }
       }
     } catch (error) {
       console.error('Failed to fetch installed items:', error);
@@ -142,14 +189,19 @@ export function MarketplaceBrowser({
       });
 
       if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setInstalledItems(prev => [...prev, result.installation]);
+        const result = (await response.json()) as InstallItemResponse;
+        setDataMode(resolveWorkbenchDataMode(result.mode, 'demo'));
+        if (result.success && result.installation) {
+          setInstalledItems((prev) => [
+            ...prev.filter((item) => item.installationId !== result.installation?.installationId),
+            result.installation,
+          ]);
           onInstall?.(item);
         }
       }
     } catch (error) {
       console.error('Failed to install item:', error);
+      setDataMode('local');
     }
   };
 
@@ -161,22 +213,25 @@ export function MarketplaceBrowser({
       });
 
       if (response.ok) {
-        setInstalledItems(prev => prev.filter(i => i.installationId !== installationId));
+        const result = (await response.json()) as { mode?: WorkbenchDataMode; success?: boolean };
+        setDataMode(resolveWorkbenchDataMode(result.mode, 'demo'));
+        setInstalledItems((prev) => prev.filter((i) => i.installationId !== installationId));
         onUninstall?.(installationId);
       }
     } catch (error) {
       console.error('Failed to uninstall item:', error);
+      setDataMode('local');
     }
   };
 
   // Check if an item is installed
   const isInstalled = (itemId: string) => {
-    return installedItems.some(i => i.itemId === itemId);
+    return installedItems.some((i) => i.itemId === itemId);
   };
 
   // Get installation for an item
   const getInstallation = (itemId: string) => {
-    return installedItems.find(i => i.itemId === itemId);
+    return installedItems.find((i) => i.itemId === itemId);
   };
 
   // Render item card
@@ -252,6 +307,7 @@ export function MarketplaceBrowser({
                   size="sm"
                   variant="ghost"
                   aria-label={`Uninstall ${item.name}`}
+                  title={`Uninstall ${item.name} from the current environment.`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (installation) handleUninstall(installation.installationId);
@@ -263,6 +319,7 @@ export function MarketplaceBrowser({
             ) : (
               <Button
                 size="sm"
+                title={`Install ${item.name} into the current environment.`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleInstall(item);
@@ -305,9 +362,7 @@ export function MarketplaceBrowser({
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
-              {selectedItem.publisher.verified && (
-                <CheckCircle className="w-5 h-5 text-accent" />
-              )}
+              {selectedItem.publisher.verified && <CheckCircle className="w-5 h-5 text-accent" />}
             </div>
             <p className="text-muted">{selectedItem.publisher.name}</p>
             <p className="text-sm text-muted">v{selectedItem.version}</p>
@@ -315,19 +370,26 @@ export function MarketplaceBrowser({
           <div>
             {installed ? (
               <div className="flex gap-2">
-                <Button variant="secondary">
+                <Button
+                  variant="secondary"
+                  title={`Open configuration options for ${selectedItem.name}.`}
+                >
                   <Settings className="w-4 h-4 mr-2" />
                   Configure
                 </Button>
                 <Button
                   variant="danger"
+                  title={`Uninstall ${selectedItem.name} from the current environment.`}
                   onClick={() => installation && handleUninstall(installation.installationId)}
                 >
                   Uninstall
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => handleInstall(selectedItem)}>
+              <Button
+                title={`Install ${selectedItem.name} into the current environment.`}
+                onClick={() => handleInstall(selectedItem)}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Install
               </Button>
@@ -349,7 +411,9 @@ export function MarketplaceBrowser({
             <div className="text-sm text-muted">{selectedItem.ratings.count} ratings</div>
           </Card>
           <Card className="p-4 text-center">
-            <div className="text-2xl font-bold">{formatNumber(selectedItem.stats.activeInstalls)}</div>
+            <div className="text-2xl font-bold">
+              {formatNumber(selectedItem.stats.activeInstalls)}
+            </div>
             <div className="text-sm text-muted">Active Installs</div>
           </Card>
         </div>
@@ -364,11 +428,15 @@ export function MarketplaceBrowser({
         <div>
           <h3 className="font-medium mb-2">Categories & Tags</h3>
           <div className="flex flex-wrap gap-2">
-            {selectedItem.categories.map(cat => (
-              <Badge key={cat} variant="secondary">{cat}</Badge>
+            {selectedItem.categories.map((cat) => (
+              <Badge key={cat} variant="secondary">
+                {cat}
+              </Badge>
             ))}
-            {selectedItem.tags.map(tag => (
-              <Badge key={tag} variant="outline">{tag}</Badge>
+            {selectedItem.tags.map((tag) => (
+              <Badge key={tag} variant="outline">
+                {tag}
+              </Badge>
             ))}
           </div>
         </div>
@@ -386,26 +454,48 @@ export function MarketplaceBrowser({
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-divider">
-        <h1 className="text-xl font-semibold">Marketplace</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" aria-label="Refresh marketplace items" onClick={fetchItems}>
+          <h1 className="text-xl font-semibold">Marketplace</h1>
+          <DataSourceBadge tone={dataMode} label={marketplaceBadgeLabel(dataMode)} />
+          <HelpTooltip label="Explain marketplace browser" side="bottom">
+            Browse installable agents, personas, workflows, extensions, and templates. This panel
+            focuses on discovery and package management rather than live execution.
+          </HelpTooltip>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Refresh marketplace items"
+            title="Reload marketplace search results from the backend."
+            onClick={fetchItems}
+          >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="px-4 pt-2"
-      >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 pt-2">
         <Tabs.List>
-          <Tabs.Trigger value="browse">Browse</Tabs.Trigger>
-          <Tabs.Trigger value="installed">
+          <Tabs.Trigger
+            value="browse"
+            title="Discover marketplace items that match the current search and filters."
+          >
+            Browse
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="installed"
+            title="Review packages already installed in this environment."
+          >
             Installed ({installedItems.length})
           </Tabs.Trigger>
-          <Tabs.Trigger value="updates">Updates</Tabs.Trigger>
+          <Tabs.Trigger
+            value="updates"
+            title="View available updates for installed marketplace items."
+          >
+            Updates
+          </Tabs.Trigger>
         </Tabs.List>
       </Tabs>
 
@@ -418,6 +508,7 @@ export function MarketplaceBrowser({
               placeholder="Search marketplace..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              title="Search by item name or description."
               className="pl-10"
             />
           </div>
@@ -425,6 +516,7 @@ export function MarketplaceBrowser({
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
             size="sm"
             aria-label="Grid view"
+            title="Show marketplace results in a card grid."
             onClick={() => setViewMode('grid')}
           >
             <Grid className="w-4 h-4" />
@@ -433,6 +525,7 @@ export function MarketplaceBrowser({
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
             size="sm"
             aria-label="List view"
+            title="Show marketplace results in a denser vertical list."
             onClick={() => setViewMode('list')}
           >
             <List className="w-4 h-4" />
@@ -443,6 +536,7 @@ export function MarketplaceBrowser({
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
+            title="Filter marketplace results by item type."
             className="bg-surface border border-divider rounded px-3 py-1.5 text-sm"
           >
             <option value="all">All Types</option>
@@ -456,6 +550,7 @@ export function MarketplaceBrowser({
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
+            title="Filter marketplace results by category."
             className="bg-surface border border-divider rounded px-3 py-1.5 text-sm"
           >
             <option value="all">All Categories</option>
@@ -477,26 +572,30 @@ export function MarketplaceBrowser({
               <RefreshCw className="w-6 h-6 animate-spin text-muted" />
             </div>
           ) : activeTab === 'browse' ? (
-            <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-3'}>
+            <div
+              className={
+                viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-3'
+              }
+            >
               {items.map(renderItemCard)}
             </div>
           ) : activeTab === 'installed' ? (
             <div className="space-y-3">
               {installedItems.length === 0 ? (
-                <div className="text-center py-8 text-muted">
-                  No items installed yet
-                </div>
+                <div className="text-center py-8 text-muted">No items installed yet</div>
               ) : (
-                installedItems.map(inst => {
-                  const item = items.find(i => i.id === inst.itemId);
+                installedItems.map((inst) => {
+                  const item =
+                    inst.item ??
+                    items.find((entry) => entry.id === inst.itemId) ??
+                    getMockItems().find((entry) => entry.id === inst.itemId) ??
+                    null;
                   return item ? renderItemCard(item) : null;
                 })
               )}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted">
-              No updates available
-            </div>
+            <div className="text-center py-8 text-muted">No updates available</div>
           )}
         </div>
 
@@ -578,4 +677,3 @@ function getMockItems(): MarketplaceItem[] {
 }
 
 export default MarketplaceBrowser;
-

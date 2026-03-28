@@ -8,5 +8,13 @@ node_modules/
 test-screenshots/
 playwright-report/
 test-results/
+output/bundle-report.json
+output/bundle-report.md
+output/bundle-baseline.patch
+output/bundle-baseline-update.md
+output/bundle-baseline-commit-message.txt
+output/bundle-baseline-branch-name.txt
+output/bundle-baseline-pr-body.md
+output/bundle-baseline-apply.sh
 *-lock.yaml
 dist/

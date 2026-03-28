@@ -71,11 +71,15 @@ export function SessionConcurrencyInfo({ sessionStatus, className = '' }: Sessio
           <div>
             <h4 className="mb-1.5 flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
               <Unlock className="h-3 w-3" />
-              Agency Concurrency (Available Now)
+              Agency Concurrency
             </h4>
             <p className="mb-2 text-slate-600 dark:text-slate-400">
               Need parallel progress? Launch an <strong>Agency session</strong>. Each seat gets its own stream and the
-              workflow runtime coordinates concurrency safely. Perfect for research + review + writing teams.
+              backend can stream seat updates independently. Perfect for research + review + writing teams. Today the
+              workbench forwards agency requests through AgentOS and the Planning panel can inspect runtime-backed
+              workflow snapshots, browse persisted runtime run records, restore manual checkpoints, and fork runtime
+              snapshots into editable plans. Runtime-run checkpoints can also be restored directly from the inspector,
+              but the workbench still does not expose graph-native authoring or true runtime resume controls.
             </p>
             <ul className="ml-4 list-disc space-y-1 text-slate-600 dark:text-slate-400">
               <li>
@@ -85,7 +89,8 @@ export function SessionConcurrencyInfo({ sessionStatus, className = '' }: Sessio
                 <strong>Live coordination:</strong> Agency updates show seat status, progress, and hand-offs in real time.
               </li>
               <li>
-                <strong>Purpose-built for concurrency:</strong> The workflow engine handles ordering, retries, and streaming.
+                <strong>Purpose-built for concurrency:</strong> Seat coordination is visible in the timeline even before the
+                unified graph runtime is fully wired into the workbench.
               </li>
             </ul>
           </div>
@@ -119,8 +124,9 @@ export function SessionConcurrencyInfo({ sessionStatus, className = '' }: Sessio
             </p>
             <p className="mt-1 text-slate-600 dark:text-slate-400">
               Persona sessions serialize turns via <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">StreamingManager</code>. 
-              Agency sessions route through <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">WorkflowRuntime</code>, which spins up multiple seats,
-              each with its own <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">conversationId</code> and shared <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">agencyId</code>.
+              Agency sessions now forward real agency requests through the backend into AgentOS, and the workbench can
+              inspect mirrored runtime runs plus persisted checkpoints. It still is not driving native
+              <code className="rounded bg-slate-100 px-1 dark:bg-slate-800"> GraphRuntime</code> pause/resume control directly.
             </p>
           </div>
         </div>
@@ -128,4 +134,3 @@ export function SessionConcurrencyInfo({ sessionStatus, className = '' }: Sessio
     </div>
   );
 }
-

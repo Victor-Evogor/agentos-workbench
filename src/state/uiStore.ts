@@ -21,6 +21,7 @@ type LeftPanelKey =
   | 'rag'
   | 'hitl'
   | 'capabilities'
+  | 'marketplace'
   | 'graph-builder'
   | 'tool-forge'
   | 'channels'
@@ -28,15 +29,20 @@ type LeftPanelKey =
   | 'call-monitor'
   | 'guardrail-eval'
   | 'observability'
+  | 'vision-pipeline'
+  | 'image-editing'
+  | 'llm-providers'
   | 'rag-docs';
 
 interface UiState {
   welcomeTourDismissed: boolean;
   welcomeTourSnoozeUntil: number | null;
+  sampleWorkspaceMode: 'sample' | 'clean' | null;
   dismissWelcomeTour: () => void;
   snoozeWelcomeTour: (hours?: number) => void;
   preferredLeftPanel: LeftPanelKey;
   setPreferredLeftPanel: (panel: LeftPanelKey) => void;
+  setSampleWorkspaceMode: (mode: 'sample' | 'clean') => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -44,12 +50,13 @@ export const useUiStore = create<UiState>()(
     (set) => ({
       welcomeTourDismissed: false,
       welcomeTourSnoozeUntil: null,
+      sampleWorkspaceMode: null,
       preferredLeftPanel: 'home',
       dismissWelcomeTour: () => set({ welcomeTourDismissed: true, welcomeTourSnoozeUntil: null }),
       snoozeWelcomeTour: (hours = 24) => set({ welcomeTourSnoozeUntil: Date.now() + hours * 60 * 60 * 1000 }),
       setPreferredLeftPanel: (panel) => set({ preferredLeftPanel: panel }),
+      setSampleWorkspaceMode: (mode) => set({ sampleWorkspaceMode: mode }),
     }),
     { name: 'agentos-workbench-ui', storage: createJSONStorage(() => (typeof window !== 'undefined' ? idbStorage : sqlStateStorage)) }
   )
 );
-
